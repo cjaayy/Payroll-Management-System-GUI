@@ -1,6 +1,7 @@
 package database;
 
 import models.Employee;
+import models.EmployeeDocument;
 import models.Payroll;
 import models.User;
 import java.sql.*;
@@ -508,6 +509,208 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
             }
         } catch (SQLException e) {
             System.err.println("Error checking for comprehensive_employee_id column: " + e.getMessage());
+        }
+        return false;
+    }
+    
+    // Contact Information Methods
+    public boolean insertEmployeeContactInfo(Employee employee) {
+        String query = "INSERT INTO employee_contact_info (employee_id, personal_email, work_phone, " +
+                      "emergency_contact, emergency_phone, street_address, barangay, city, province_state, " +
+                      "country, zip_code, birth_date, social_security_number, nationality, marital_status) " +
+                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) " +
+                      "ON DUPLICATE KEY UPDATE " +
+                      "personal_email = VALUES(personal_email), " +
+                      "work_phone = VALUES(work_phone), " +
+                      "emergency_contact = VALUES(emergency_contact), " +
+                      "emergency_phone = VALUES(emergency_phone), " +
+                      "street_address = VALUES(street_address), " +
+                      "barangay = VALUES(barangay), " +
+                      "city = VALUES(city), " +
+                      "province_state = VALUES(province_state), " +
+                      "country = VALUES(country), " +
+                      "zip_code = VALUES(zip_code), " +
+                      "birth_date = VALUES(birth_date), " +
+                      "social_security_number = VALUES(social_security_number), " +
+                      "nationality = VALUES(nationality), " +
+                      "marital_status = VALUES(marital_status)";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            // Use the basic employee ID format (EMP###) for foreign key constraint
+            String employeeId = String.format("EMP%03d", employee.getEmployeeId());
+            System.out.println("Saving contact info for employee: " + employeeId + " (formatted: " + employee.getFormattedEmployeeId() + ")");
+            
+            stmt.setString(1, employeeId);
+            stmt.setString(2, employee.getPersonalEmail());
+            stmt.setString(3, employee.getWorkPhone());
+            stmt.setString(4, employee.getEmergencyContact());
+            stmt.setString(5, employee.getEmergencyPhone());
+            stmt.setString(6, employee.getStreetAddress());
+            stmt.setString(7, employee.getBarangay());
+            stmt.setString(8, employee.getCity());
+            stmt.setString(9, employee.getProvinceState());
+            stmt.setString(10, employee.getCountry());
+            stmt.setString(11, employee.getZipCode());
+            stmt.setDate(12, employee.getBirthDate() != null ? 
+                java.sql.Date.valueOf(employee.getBirthDate()) : null);
+            stmt.setString(13, employee.getSocialSecurityNumber());
+            stmt.setString(14, employee.getNationality());
+            stmt.setString(15, employee.getMaritalStatus());
+            
+            int rowsAffected = stmt.executeUpdate();
+            System.out.println("Contact info save result: " + rowsAffected + " rows affected");
+            return rowsAffected > 0;
+        } catch (SQLException e) {
+            System.err.println("Error inserting employee contact info: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    public boolean loadEmployeeContactInfo(Employee employee) {
+        String query = "SELECT personal_email, work_phone, emergency_contact, emergency_phone, " +
+                      "street_address, barangay, city, province_state, country, zip_code, birth_date, " +
+                      "social_security_number, nationality, marital_status " +
+                      "FROM employee_contact_info " +
+                      "WHERE employee_id = ?";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            // Use the basic employee ID format (EMP###) for foreign key constraint
+            String employeeId = String.format("EMP%03d", employee.getEmployeeId());
+            stmt.setString(1, employeeId);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                employee.setPersonalEmail(rs.getString("personal_email"));
+                employee.setWorkPhone(rs.getString("work_phone"));
+                employee.setEmergencyContact(rs.getString("emergency_contact"));
+                employee.setEmergencyPhone(rs.getString("emergency_phone"));
+                employee.setStreetAddress(rs.getString("street_address"));
+                employee.setBarangay(rs.getString("barangay"));
+                employee.setCity(rs.getString("city"));
+                employee.setProvinceState(rs.getString("province_state"));
+                employee.setCountry(rs.getString("country"));
+                employee.setZipCode(rs.getString("zip_code"));
+                
+                java.sql.Date birthDate = rs.getDate("birth_date");
+                if (birthDate != null) {
+                    employee.setBirthDate(birthDate.toLocalDate());
+                }
+                
+                employee.setSocialSecurityNumber(rs.getString("social_security_number"));
+                employee.setNationality(rs.getString("nationality"));
+                employee.setMaritalStatus(rs.getString("marital_status"));
+                
+                return true;
+            }
+        } catch (SQLException e) {
+            System.err.println("Error loading employee contact info: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    // Document Management Methods
+    public boolean insertEmployeeDocument(EmployeeDocument document) {
+        String query = "INSERT INTO employee_documents (employee_id, document_type, file_name, " +
+                      "file_path, file_data, file_size, mime_type, description, uploaded_by) " +
+                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+            
+            // Use the simple EMP format that matches what's in the database
+            String employeeIdString = String.format("EMP%03d", document.getEmployeeId());
+            System.out.println("Inserting document for employee ID: " + employeeIdString + " (Document: " + document.getFileName() + ")");
+            
+            stmt.setString(1, employeeIdString);
+            stmt.setString(2, document.getDocumentType());
+            stmt.setString(3, document.getFileName());
+            stmt.setString(4, document.getFilePath());
+            stmt.setBytes(5, document.getFileData());
+            stmt.setLong(6, document.getFileSize());
+            stmt.setString(7, document.getMimeType());
+            stmt.setString(8, document.getDescription());
+            stmt.setString(9, document.getUploadedBy());
+            
+            int rowsAffected = stmt.executeUpdate();
+            
+            if (rowsAffected > 0) {
+                try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        document.setDocumentId(generatedKeys.getInt(1));
+                    }
+                }
+                System.out.println("Document inserted successfully with ID: " + document.getDocumentId());
+                return true;
+            }
+        } catch (SQLException e) {
+            System.err.println("Error inserting employee document: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    public List<EmployeeDocument> getEmployeeDocuments(Employee employee) {
+        List<EmployeeDocument> documents = new ArrayList<>();
+        String query = "SELECT id, document_type, file_name, file_path, file_data, " +
+                      "file_size, mime_type, description, uploaded_by, created_at " +
+                      "FROM employee_documents " +
+                      "WHERE employee_id = ? " +
+                      "ORDER BY created_at DESC";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            // Use the simple EMP format that matches how documents are saved
+            String employeeIdString = String.format("EMP%03d", employee.getEmployeeId());
+            System.out.println("Loading documents for employee ID: " + employeeIdString + " (Formatted ID: " + employee.getFormattedEmployeeId() + ")");
+            stmt.setString(1, employeeIdString);
+            ResultSet rs = stmt.executeQuery();
+            
+            int documentCount = 0;
+            while (rs.next()) {
+                EmployeeDocument document = new EmployeeDocument(
+                    rs.getInt("id"),
+                    employee.getEmployeeId(),
+                    rs.getString("document_type"),
+                    rs.getString("file_name"),
+                    rs.getString("file_path"),
+                    rs.getBytes("file_data"),
+                    rs.getString("description"),
+                    rs.getTimestamp("created_at").toLocalDateTime(),
+                    rs.getString("uploaded_by")
+                );
+                documents.add(document);
+                documentCount++;
+                System.out.println("Loaded document [" + documentCount + "]: " + document.getFileName() + " (ID: " + document.getDocumentId() + ")");
+            }
+            System.out.println("Total loaded " + documentCount + " documents for employee: " + employeeIdString);
+        } catch (SQLException e) {
+            System.err.println("Error loading employee documents: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return documents;
+    }
+    
+    public boolean deleteEmployeeDocument(int documentId) {
+        String query = "DELETE FROM employee_documents WHERE id = ?";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            System.out.println("Attempting to delete document with ID: " + documentId);
+            stmt.setInt(1, documentId);
+            int rowsAffected = stmt.executeUpdate();
+            System.out.println("Document deletion - rows affected: " + rowsAffected);
+            return rowsAffected > 0;
+        } catch (SQLException e) {
+            System.err.println("Error deleting employee document: " + e.getMessage());
+            e.printStackTrace();
         }
         return false;
     }

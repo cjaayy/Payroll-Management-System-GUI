@@ -1,6 +1,7 @@
 package managers;
 
 import models.Employee;
+import models.EmployeeDocument;
 import database.DatabaseDAO;
 import database.MySQLDatabaseDAO;
 import java.time.LocalDate;
@@ -12,9 +13,11 @@ import java.util.*;
  */
 public class EmployeeManager {
     private DatabaseDAO databaseDAO;
+    private MySQLDatabaseDAO mySQLDAO;
     
     public EmployeeManager() {
         databaseDAO = new MySQLDatabaseDAO();
+        mySQLDAO = (MySQLDatabaseDAO) databaseDAO;
         // Don't pre-calculate nextEmployeeId, calculate it fresh each time
         // Don't initialize sample data - let the DatabaseConnection handle it
     }
@@ -395,5 +398,108 @@ public class EmployeeManager {
         } catch (NumberFormatException e) {
             return -1;
         }
+    }
+    
+    // Enhanced employee management with contact info and documents
+    public boolean saveEmployeeWithContactInfo(Employee employee) {
+        boolean success = false;
+        
+        // First save basic employee info
+        if (employee.getEmployeeId() == 0) {
+            employee.setEmployeeId(getNextEmployeeId());
+            success = databaseDAO.insertEmployee(employee);
+        } else {
+            success = databaseDAO.updateEmployee(employee);
+        }
+        
+        // If basic info saved successfully, try to save contact info
+        if (success) {
+            try {
+                System.out.println("Attempting to save contact info for employee: " + employee.getFormattedEmployeeId());
+                boolean contactInfoSaved = mySQLDAO.insertEmployeeContactInfo(employee);
+                
+                if (!contactInfoSaved) {
+                    System.err.println("Warning: Contact information could not be saved for employee: " + employee.getFormattedEmployeeId());
+                } else {
+                    System.out.println("Contact information saved successfully for employee: " + employee.getFormattedEmployeeId());
+                }
+                
+                // Save documents
+                if (employee.getDocuments() != null && !employee.getDocuments().isEmpty()) {
+                    System.out.println("Attempting to save " + employee.getDocuments().size() + " documents for employee: " + employee.getFormattedEmployeeId());
+                    int savedDocuments = 0;
+                    for (EmployeeDocument document : employee.getDocuments()) {
+                        if (document.getDocumentId() == 0) { // New document
+                            document.setEmployeeId(employee.getEmployeeId());
+                            System.out.println("Saving document: " + document.getFileName() + " for employee ID: " + employee.getEmployeeId());
+                            boolean documentSaved = mySQLDAO.insertEmployeeDocument(document);
+                            if (documentSaved) {
+                                savedDocuments++;
+                                System.out.println("Document saved successfully: " + document.getFileName());
+                            } else {
+                                System.err.println("Failed to save document: " + document.getFileName());
+                            }
+                        }
+                    }
+                    System.out.println("Successfully saved " + savedDocuments + " out of " + employee.getDocuments().size() + " documents");
+                } else {
+                    System.out.println("No documents to save for employee: " + employee.getFormattedEmployeeId());
+                }
+            } catch (Exception e) {
+                System.err.println("Error saving contact info/documents: " + e.getMessage());
+                e.printStackTrace();
+                // Don't fail the whole operation if contact info can't be saved
+            }
+        }
+        
+        return success;
+    }
+    
+    public void loadEmployeeContactInfo(Employee employee) {
+        try {
+            mySQLDAO.loadEmployeeContactInfo(employee);
+            
+            // Load documents
+            List<EmployeeDocument> documents = mySQLDAO.getEmployeeDocuments(employee);
+            employee.setDocuments(documents);
+        } catch (Exception e) {
+            // Handle gracefully if tables don't exist yet
+            System.err.println("Note: Contact info tables not available yet. " + e.getMessage());
+            // Initialize empty contact info
+            employee.setPersonalEmail("");
+            employee.setWorkPhone("");
+            employee.setEmergencyContact("");
+            employee.setEmergencyPhone("");
+            employee.setStreetAddress("");
+            employee.setCity("");
+            employee.setProvinceState("");
+            employee.setZipCode("");
+            employee.setCountry("");
+            employee.setBirthDate(null);
+            employee.setSocialSecurityNumber("");
+            employee.setNationality("");
+            employee.setMaritalStatus("");
+            employee.setDocuments(new ArrayList<>());
+        }
+    }
+    
+    public boolean deleteEmployeeDocument(int documentId) {
+        return mySQLDAO.deleteEmployeeDocument(documentId);
+    }
+    
+    public boolean saveEmployeeDocument(EmployeeDocument document) {
+        return mySQLDAO.insertEmployeeDocument(document);
+    }
+    
+    // Enhanced getAllEmployees method to include contact info and documents
+    public List<Employee> getAllEmployeesWithContactInfo() {
+        List<Employee> employees = databaseDAO.getAllEmployees();
+        
+        // Load contact info and documents for each employee
+        for (Employee employee : employees) {
+            loadEmployeeContactInfo(employee);
+        }
+        
+        return employees;
     }
 }

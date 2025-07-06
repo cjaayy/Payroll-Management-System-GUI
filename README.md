@@ -24,6 +24,23 @@ A comprehensive Java Swing-based GUI application for managing employee payroll o
 - MySQL Server (5.7 or higher)
 - MySQL Workbench (for database management)
 
+## Quick Start
+
+1. **Run the application**:
+   ```
+   run.bat
+   ```
+
+2. **Build only** (without running):
+   ```
+   build.bat
+   ```
+
+3. **Clean build files**:
+   ```
+   clean.bat
+   ```
+
 ## Database Setup
 
 1. **Install MySQL Server** and ensure it's running

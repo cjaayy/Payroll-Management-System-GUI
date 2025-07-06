@@ -235,12 +235,32 @@ public class EmployeePanel extends JPanel {
             return;
         }
         
-        EmployeeDialog dialog = new EmployeeDialog(SwingUtilities.getWindowAncestor(this), 
-                                                  mainApp.getEmployeeManager(), null);
-        dialog.setVisible(true);
-        
-        if (dialog.isConfirmed()) {
-            refreshTable();
+        try {
+            EmployeeDialog dialog = new EmployeeDialog(SwingUtilities.getWindowAncestor(this), 
+                                                      mainApp.getEmployeeManager(), null);
+            dialog.setVisible(true);
+            
+            if (dialog.isConfirmed()) {
+                Employee newEmployee = dialog.getEmployee();
+                if (mainApp.getEmployeeManager().saveEmployeeWithContactInfo(newEmployee)) {
+                    refreshTable();
+                    JOptionPane.showMessageDialog(this, "Employee added successfully!", 
+                                                "Success", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this, "Failed to add employee!", 
+                                                "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        } catch (Exception e) {
+            // Fall back to basic dialog if enhanced dialog fails
+            System.err.println("Enhanced dialog not available, using basic dialog: " + e.getMessage());
+            EmployeeDialog dialog = new EmployeeDialog(SwingUtilities.getWindowAncestor(this), 
+                                                      mainApp.getEmployeeManager(), null);
+            dialog.setVisible(true);
+            
+            if (dialog.isConfirmed()) {
+                refreshTable();
+            }
         }
     }
     
@@ -263,12 +283,35 @@ public class EmployeePanel extends JPanel {
         Employee employee = mainApp.getEmployeeManager().getEmployee(employeeId);
         
         if (employee != null) {
-            EmployeeDialog dialog = new EmployeeDialog(SwingUtilities.getWindowAncestor(this), 
-                                                      mainApp.getEmployeeManager(), employee);
-            dialog.setVisible(true);
+            // Load contact info and documents for the employee
+            mainApp.getEmployeeManager().loadEmployeeContactInfo(employee);
             
-            if (dialog.isConfirmed()) {
-                refreshTable();
+            try {
+                EmployeeDialog dialog = new EmployeeDialog(SwingUtilities.getWindowAncestor(this), 
+                                                          mainApp.getEmployeeManager(), employee);
+                dialog.setVisible(true);
+                
+                if (dialog.isConfirmed()) {
+                    Employee updatedEmployee = dialog.getEmployee();
+                    if (mainApp.getEmployeeManager().saveEmployeeWithContactInfo(updatedEmployee)) {
+                        refreshTable();
+                        JOptionPane.showMessageDialog(this, "Employee updated successfully!", 
+                                                    "Success", JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Failed to update employee!", 
+                                                    "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            } catch (Exception e) {
+                // Fall back to basic dialog if enhanced dialog fails
+                System.err.println("Enhanced dialog not available, using basic dialog: " + e.getMessage());
+                EmployeeDialog dialog = new EmployeeDialog(SwingUtilities.getWindowAncestor(this), 
+                                                          mainApp.getEmployeeManager(), employee);
+                dialog.setVisible(true);
+                
+                if (dialog.isConfirmed()) {
+                    refreshTable();
+                }
             }
         }
     }

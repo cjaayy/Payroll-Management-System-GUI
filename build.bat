@@ -1,6 +1,6 @@
 @echo off
 echo ===============================================
-echo    Payroll Management System GUI
+echo    Payroll Management System - Build Only
 echo ===============================================
 echo.
 cd /d "%~dp0"
@@ -42,23 +42,6 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo [INFO] Compilation successful!
+echo [INFO] Build successful!
 echo.
-
-REM Check database configuration
-if exist "database.config" (
-    echo [INFO] Database configuration file found.
-    echo [INFO] To apply configuration, run: configure-database.bat
-    echo.
-) else (
-    echo [NOTE] No database.config file found.
-    echo [NOTE] See MYSQL_SETUP.md for MySQL setup instructions.
-    echo.
-)
-
-REM Run the application
-echo [INFO] Starting Payroll Management System...
-echo.
-java -cp "lib/*;classes" gui.PayrollManagementSystemGUI
-
 pause

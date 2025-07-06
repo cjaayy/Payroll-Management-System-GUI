@@ -2,6 +2,8 @@ package models;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Employee class representing an employee in the payroll system
@@ -21,6 +23,25 @@ public class Employee {
     private LocalDate hireDate;
     private boolean isActive;
     
+    // Contact and Personal Information
+    private String personalEmail;
+    private String workPhone;
+    private String emergencyContact;
+    private String emergencyPhone;
+    private String streetAddress;
+    private String barangay;
+    private String city;
+    private String provinceState;
+    private String country;
+    private String zipCode;
+    private LocalDate birthDate;
+    private String socialSecurityNumber;
+    private String nationality;
+    private String maritalStatus;
+    
+    // Document Storage
+    private List<EmployeeDocument> documents;
+    
     public Employee(int employeeId, String firstName, String lastName, String email, 
                    String department, String position, double baseSalary, LocalDate hireDate) {
         this.employeeId = employeeId;
@@ -36,6 +57,8 @@ public class Employee {
         this.hireDate = hireDate;
         this.isActive = true;
         this.comprehensiveEmployeeId = null; // Will be set by EmployeeManager
+        this.documents = new ArrayList<>();
+        initializePersonalInfo();
     }
     
     // Constructor for database operations
@@ -69,6 +92,8 @@ public class Employee {
         this.hireDate = new java.sql.Date(hireDate.getTime()).toLocalDate();
         this.isActive = true;
         this.comprehensiveEmployeeId = null; // Will be generated if needed
+        this.documents = new ArrayList<>();
+        initializePersonalInfo();
     }
     
     // Constructor for database operations with employment details
@@ -103,6 +128,25 @@ public class Employee {
         this.hireDate = new java.sql.Date(hireDate.getTime()).toLocalDate();
         this.isActive = true;
         this.comprehensiveEmployeeId = null; // Will be generated if needed
+        this.documents = new ArrayList<>();
+        initializePersonalInfo();
+    }
+    
+    private void initializePersonalInfo() {
+        this.personalEmail = "";
+        this.workPhone = "";
+        this.emergencyContact = "";
+        this.emergencyPhone = "";
+        this.streetAddress = "";
+        this.barangay = "";
+        this.city = "";
+        this.provinceState = "";
+        this.country = "";
+        this.zipCode = "";
+        this.birthDate = null;
+        this.socialSecurityNumber = "";
+        this.nationality = "";
+        this.maritalStatus = "";
     }
     
     // Getters and setters
@@ -136,6 +180,65 @@ public class Employee {
     public boolean isActive() { return isActive; }
     public void setActive(boolean active) { isActive = active; }
     
+    public String getPersonalEmail() { return personalEmail; }
+    public void setPersonalEmail(String personalEmail) { this.personalEmail = personalEmail; }
+    
+    public String getWorkPhone() { return workPhone; }
+    public void setWorkPhone(String workPhone) { this.workPhone = workPhone; }
+    
+    public String getEmergencyContact() { return emergencyContact; }
+    public void setEmergencyContact(String emergencyContact) { this.emergencyContact = emergencyContact; }
+    
+    public String getEmergencyPhone() { return emergencyPhone; }
+    public void setEmergencyPhone(String emergencyPhone) { this.emergencyPhone = emergencyPhone; }
+    
+    public String getStreetAddress() { return streetAddress; }
+    public void setStreetAddress(String streetAddress) { this.streetAddress = streetAddress; }
+    
+    public String getBarangay() { return barangay; }
+    public void setBarangay(String barangay) { this.barangay = barangay; }
+    
+    public String getCity() { return city; }
+    public void setCity(String city) { this.city = city; }
+    
+    public String getProvinceState() { return provinceState; }
+    public void setProvinceState(String provinceState) { this.provinceState = provinceState; }
+    
+    public String getCountry() { return country; }
+    public void setCountry(String country) { this.country = country; }
+    
+    public String getZipCode() { return zipCode; }
+    public void setZipCode(String zipCode) { this.zipCode = zipCode; }
+    
+    public LocalDate getBirthDate() { return birthDate; }
+    public void setBirthDate(LocalDate birthDate) { this.birthDate = birthDate; }
+    
+    public String getSocialSecurityNumber() { return socialSecurityNumber; }
+    public void setSocialSecurityNumber(String socialSecurityNumber) { this.socialSecurityNumber = socialSecurityNumber; }
+    
+    public String getNationality() { return nationality; }
+    public void setNationality(String nationality) { this.nationality = nationality; }
+    
+    public String getMaritalStatus() { return maritalStatus; }
+    public void setMaritalStatus(String maritalStatus) { this.maritalStatus = maritalStatus; }
+    
+    // Document Management
+    public List<EmployeeDocument> getDocuments() { return documents; }
+    public void setDocuments(List<EmployeeDocument> documents) { this.documents = documents; }
+    
+    public void addDocument(EmployeeDocument document) {
+        if (this.documents == null) {
+            this.documents = new ArrayList<>();
+        }
+        this.documents.add(document);
+    }
+    
+    public void removeDocument(EmployeeDocument document) {
+        if (this.documents != null) {
+            this.documents.remove(document);
+        }
+    }
+    
     public String getFullName() {
         return firstName + " " + lastName;
     }
@@ -151,6 +254,34 @@ public class Employee {
         return String.format("EMP%03d", employeeId);
     }
     
+    public String getFullAddress() {
+        StringBuilder sb = new StringBuilder();
+        if (streetAddress != null && !streetAddress.trim().isEmpty()) {
+            sb.append(streetAddress);
+        }
+        if (barangay != null && !barangay.trim().isEmpty()) {
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(barangay);
+        }
+        if (city != null && !city.trim().isEmpty()) {
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(city);
+        }
+        if (provinceState != null && !provinceState.trim().isEmpty()) {
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(provinceState);
+        }
+        if (zipCode != null && !zipCode.trim().isEmpty()) {
+            if (sb.length() > 0) sb.append(" ");
+            sb.append(zipCode);
+        }
+        if (country != null && !country.trim().isEmpty()) {
+            if (sb.length() > 0) sb.append(", ");
+            sb.append(country);
+        }
+        return sb.toString();
+    }
+    
     @Override
     public String toString() {
         String managerInfo = (manager != null && !manager.trim().isEmpty()) ? " | Manager: " + manager : "";
@@ -158,4 +289,17 @@ public class Employee {
                 getFormattedEmployeeId(), getFullName(), department, position, managerInfo, baseSalary, 
                 hireDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
     }
+    
+    // Backward compatibility methods for old field names
+    @Deprecated
+    public String getAddress() { return streetAddress; }
+    
+    @Deprecated
+    public void setAddress(String address) { this.streetAddress = address; }
+    
+    @Deprecated
+    public String getState() { return provinceState; }
+    
+    @Deprecated
+    public void setState(String state) { this.provinceState = state; }
 }
