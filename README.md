@@ -6,6 +6,12 @@ A comprehensive Java Swing-based GUI application for managing employee payroll o
 
 - **User Authentication**: Login system with admin and HR roles
 - **Employee Management**: Add, edit, delete, and search employees
+  - **Employment Details**: Store comprehensive employment information including:
+    - Job Title (specific position title)
+    - Manager information
+    - Department and position
+    - Personal details (name, email, phone)
+    - Hire date and salary
 - **Payroll Management**: Create, edit, and manage payroll records
 - **Reports**: Generate various reports including employee summary, payroll summary, department reports, and monthly reports
 - **Role-based Access Control**: Admin privileges required for certain operations
@@ -32,23 +38,11 @@ A comprehensive Java Swing-based GUI application for managing employee payroll o
 
 ### Method 1: Using Batch File (Windows)
 ```bash
-# Download MySQL JDBC driver
-download-mysql-driver.bat
-
 # Compile and run
 run.bat
 ```
 
-### Method 2: Using PowerShell
-```powershell
-# Download MySQL JDBC driver
-.\download-mysql-driver.ps1
-
-# Compile and run
-.\run.ps1
-```
-
-### Method 3: Manual Setup
+### Method 2: Manual Setup
 ```bash
 # Download MySQL JDBC driver to lib/ directory
 # Then compile:

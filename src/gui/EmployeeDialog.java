@@ -26,6 +26,8 @@ public class EmployeeDialog extends JDialog {
     private JTextField phoneField;
     private JComboBox<String> departmentComboBox;
     private JComboBox<String> positionComboBox;
+    private JTextField jobTitleField;
+    private JTextField managerField;
     private JTextField salaryField;
     private JTextField hireDateField;
     
@@ -45,7 +47,7 @@ public class EmployeeDialog extends JDialog {
             populateFields();
         }
         
-        setSize(400, 400);
+        setSize(400, 450);
         setLocationRelativeTo(parent);
     }
     
@@ -65,6 +67,8 @@ public class EmployeeDialog extends JDialog {
         positionComboBox = new JComboBox<>(new String[0]);
         positionComboBox.setEditable(false);
         
+        jobTitleField = new JTextField(20);
+        managerField = new JTextField(20);
         salaryField = new JTextField(20);
         hireDateField = new JTextField(20);
         
@@ -157,11 +161,21 @@ public class EmployeeDialog extends JDialog {
         formPanel.add(positionComboBox, gbc);
         
         gbc.gridx = 0; gbc.gridy = 7;
+        formPanel.add(new JLabel("Job Title:"), gbc);
+        gbc.gridx = 1;
+        formPanel.add(jobTitleField, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 8;
+        formPanel.add(new JLabel("Manager:"), gbc);
+        gbc.gridx = 1;
+        formPanel.add(managerField, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 9;
         formPanel.add(new JLabel("Base Salary:"), gbc);
         gbc.gridx = 1;
         formPanel.add(salaryField, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 8;
+        gbc.gridx = 0; gbc.gridy = 10;
         formPanel.add(new JLabel("Hire Date:"), gbc);
         gbc.gridx = 1;
         formPanel.add(hireDateField, gbc);
@@ -202,6 +216,9 @@ public class EmployeeDialog extends JDialog {
         updatePositionComboBox();
         positionComboBox.setSelectedItem(employee.getPosition());
         
+        jobTitleField.setText(employee.getJobTitle() != null ? employee.getJobTitle() : "");
+        managerField.setText(employee.getManager() != null ? employee.getManager() : "");
+        
         salaryField.setText(String.valueOf(employee.getBaseSalary()));
         hireDateField.setText(employee.getHireDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
     }
@@ -214,14 +231,16 @@ public class EmployeeDialog extends JDialog {
             String phone = phoneField.getText().trim();
             String department = (String) departmentComboBox.getSelectedItem();
             String position = (String) positionComboBox.getSelectedItem();
+            String jobTitle = jobTitleField.getText().trim();
+            String manager = managerField.getText().trim();
             String salaryText = salaryField.getText().trim();
             String hireDateText = hireDateField.getText().trim();
             
-            // Validate required fields
+            // Validate required fields (job title and manager are optional)
             if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || 
                 department == null || department.isEmpty() || position == null || position.isEmpty() || 
                 salaryText.isEmpty() || hireDateText.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Please fill in all required fields.\nNote: Phone is optional.", 
+                JOptionPane.showMessageDialog(this, "Please fill in all required fields.\nNote: Phone, Job Title, and Manager are optional.", 
                                             "Validation Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
@@ -283,7 +302,9 @@ public class EmployeeDialog extends JDialog {
             if (employee == null) {
                 // Add new employee
                 Employee newEmployee = employeeManager.createEmployee(firstName, lastName, email, 
-                    phone.isEmpty() ? null : phone, department, position, salary, hireDate);
+                    phone.isEmpty() ? null : phone, department, position, 
+                    jobTitle.isEmpty() ? null : jobTitle, manager.isEmpty() ? null : manager,
+                    salary, hireDate);
                 if (newEmployee != null) {
                     JOptionPane.showMessageDialog(this, "Employee added successfully!");
                 } else {
@@ -294,8 +315,12 @@ public class EmployeeDialog extends JDialog {
             } else {
                 // Update existing employee
                 employee.setPhone(phone.isEmpty() ? null : phone);
+                employee.setJobTitle(jobTitle.isEmpty() ? null : jobTitle);
+                employee.setManager(manager.isEmpty() ? null : manager);
                 boolean updateSuccess = employeeManager.updateEmployee(employee.getEmployeeId(), firstName, lastName, 
-                                             email, phone.isEmpty() ? null : phone, department, position, salary, hireDate);
+                                             email, phone.isEmpty() ? null : phone, department, position, 
+                                             jobTitle.isEmpty() ? null : jobTitle, manager.isEmpty() ? null : manager,
+                                             salary, hireDate);
                 if (updateSuccess) {
                     JOptionPane.showMessageDialog(this, "Employee updated successfully!");
                 } else {

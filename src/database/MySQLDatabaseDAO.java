@@ -70,6 +70,8 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
                         rs.getString("phone"),
                         rs.getString("department"),
                         rs.getString("position"),
+                        rs.getString("job_title"),
+                        rs.getString("manager"),
                         rs.getDate("hire_date"),
                         rs.getDouble("salary")
                     );
@@ -113,6 +115,8 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
                         rs.getString("phone"),
                         rs.getString("department"),
                         rs.getString("position"),
+                        rs.getString("job_title"),
+                        rs.getString("manager"),
                         rs.getDate("hire_date"),
                         rs.getDouble("salary")
                     );
@@ -156,6 +160,8 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
                     rs.getString("phone"),
                     rs.getString("department"),
                     rs.getString("position"),
+                    rs.getString("job_title"),
+                    rs.getString("manager"),
                     rs.getDate("hire_date"),
                     rs.getDouble("salary")
                 );
@@ -211,8 +217,10 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
                     stmt.setString(6, employee.getPhone() == null || employee.getPhone().trim().isEmpty() ? null : employee.getPhone());
                     stmt.setString(7, employee.getDepartment());
                     stmt.setString(8, employee.getPosition());
-                    stmt.setDate(9, java.sql.Date.valueOf(employee.getHireDate()));
-                    stmt.setDouble(10, employee.getSalary());
+                    stmt.setString(9, employee.getJobTitle());
+                    stmt.setString(10, employee.getManager());
+                    stmt.setDate(11, java.sql.Date.valueOf(employee.getHireDate()));
+                    stmt.setDouble(12, employee.getSalary());
                 } else {
                     stmt.setString(2, employee.getFirstName());
                     stmt.setString(3, employee.getLastName());
@@ -274,10 +282,12 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
                 stmt.setString(5, employee.getPhone() == null || employee.getPhone().trim().isEmpty() ? null : employee.getPhone());
                 stmt.setString(6, employee.getDepartment());
                 stmt.setString(7, employee.getPosition());
-                stmt.setDate(8, java.sql.Date.valueOf(employee.getHireDate()));
-                stmt.setDouble(9, employee.getSalary());
+                stmt.setString(8, employee.getJobTitle());
+                stmt.setString(9, employee.getManager());
+                stmt.setDate(10, java.sql.Date.valueOf(employee.getHireDate()));
+                stmt.setDouble(11, employee.getSalary());
                 String empIdString = String.format("EMP%03d", employee.getEmployeeId());
-                stmt.setString(10, empIdString);
+                stmt.setString(12, empIdString);
             } else {
                 stmt.setString(1, employee.getFirstName());
                 stmt.setString(2, employee.getLastName());

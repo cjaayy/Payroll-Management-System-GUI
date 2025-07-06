@@ -13,14 +13,14 @@ for %%f in ("lib\mysql-connector-*.jar") do (
 
 if %MYSQL_DRIVER_FOUND%==0 (
     echo MySQL JDBC Driver not found!
-    echo Please run download-mysql-driver.bat first to download the MySQL driver.
+    echo Please download the MySQL JDBC driver manually and place it in the lib/ directory.
+    echo You can download it from: https://dev.mysql.com/downloads/connector/j/
     echo.
-    choice /C YN /M "Do you want to download the MySQL driver now?"
-    if errorlevel 2 goto :skipdownload
-    if errorlevel 1 call download-mysql-driver-alt.ps1
+    echo For detailed instructions, see MYSQL_SETUP.md
+    pause
+    exit /b 1
 )
 
-:skipdownload
 REM Create classes directory if it doesn't exist
 if not exist "classes" mkdir classes
 
@@ -42,7 +42,7 @@ if exist "database.config" (
     echo To apply configuration, run: configure-database.bat
     echo.
 ) else (
-    echo Note: For MySQL Workbench integration, see QUICK_MYSQL_SETUP.md
+    echo Note: For MySQL Workbench integration, see MYSQL_SETUP.md
     echo.
 )
 echo Running application...

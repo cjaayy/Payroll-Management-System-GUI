@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS employees (
     phone VARCHAR(20),
     department VARCHAR(50),
     position VARCHAR(50),
+    job_title VARCHAR(100),
+    manager VARCHAR(100),
     hire_date DATE,
     salary DECIMAL(10, 2),
     status VARCHAR(20) DEFAULT 'ACTIVE',
@@ -68,11 +70,11 @@ INSERT IGNORE INTO users (username, password, role)
 VALUES ('admin', 'admin123', 'ADMIN');
 
 -- Insert sample employees (optional)
-INSERT IGNORE INTO employees (employee_id, first_name, last_name, email, phone, department, position, hire_date, salary) 
+INSERT IGNORE INTO employees (employee_id, first_name, last_name, email, phone, department, position, job_title, manager, hire_date, salary) 
 VALUES 
-('EMP001', 'John', 'Doe', 'john.doe@company.com', '555-0101', 'IT', 'Software Developer', '2024-01-15', 75000.00),
-('EMP002', 'Jane', 'Smith', 'jane.smith@company.com', '555-0102', 'HR', 'HR Manager', '2024-02-01', 65000.00),
-('EMP003', 'Mike', 'Johnson', 'mike.johnson@company.com', '555-0103', 'Finance', 'Accountant', '2024-03-01', 55000.00);
+('EMP001', 'John', 'Doe', 'john.doe@company.com', '555-0101', 'IT', 'Software Developer', 'Senior Software Developer', 'Jane Smith', '2024-01-15', 75000.00),
+('EMP002', 'Jane', 'Smith', 'jane.smith@company.com', '555-0102', 'HR', 'HR Manager', 'Human Resources Manager', 'Michael Johnson', '2024-02-01', 65000.00),
+('EMP003', 'Mike', 'Johnson', 'mike.johnson@company.com', '555-0103', 'Finance', 'Accountant', 'Senior Accountant', 'Sarah Davis', '2024-03-01', 55000.00);
 
 -- Step 5: Verify Setup
 SELECT 'Database setup completed successfully!' as status;
@@ -86,7 +88,7 @@ SELECT username, role, created_at FROM users;
 
 -- Show employees
 SELECT 'Employees Table:' as info;
-SELECT employee_id, first_name, last_name, department, position, salary FROM employees;
+SELECT employee_id, first_name, last_name, department, position, job_title, manager, salary FROM employees;
 
 -- Show database structure
 SELECT 'Database Structure:' as info;

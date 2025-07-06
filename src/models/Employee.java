@@ -15,6 +15,8 @@ public class Employee {
     private String phone;
     private String department;
     private String position;
+    private String jobTitle;        // More specific than position
+    private String manager;         // Manager's name or ID
     private double baseSalary;
     private LocalDate hireDate;
     private boolean isActive;
@@ -28,6 +30,8 @@ public class Employee {
         this.phone = null;
         this.department = department;
         this.position = position;
+        this.jobTitle = position; // Default to position if not specified
+        this.manager = null;
         this.baseSalary = baseSalary;
         this.hireDate = hireDate;
         this.isActive = true;
@@ -59,6 +63,42 @@ public class Employee {
         this.phone = phone != null ? phone : "";
         this.department = department;
         this.position = position;
+        this.jobTitle = position; // Default to position if not specified
+        this.manager = null; // Will be set separately if needed
+        this.baseSalary = baseSalary;
+        this.hireDate = new java.sql.Date(hireDate.getTime()).toLocalDate();
+        this.isActive = true;
+        this.comprehensiveEmployeeId = null; // Will be generated if needed
+    }
+    
+    // Constructor for database operations with employment details
+    public Employee(String employeeId, String firstName, String lastName, String email, 
+                   String phone, String department, String position, String jobTitle, 
+                   String manager, java.util.Date hireDate, double baseSalary) {
+        // Extract numeric part from string ID (e.g., "EMP001" -> 1)
+        if (employeeId.startsWith("EMP")) {
+            try {
+                this.employeeId = Integer.parseInt(employeeId.substring(3));
+            } catch (NumberFormatException e) {
+                System.err.println("Error parsing employee ID: " + employeeId);
+                this.employeeId = 0; // Default value
+            }
+        } else {
+            try {
+                this.employeeId = Integer.parseInt(employeeId);
+            } catch (NumberFormatException e) {
+                System.err.println("Error parsing employee ID: " + employeeId);
+                this.employeeId = 0; // Default value
+            }
+        }
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.phone = phone != null ? phone : "";
+        this.department = department;
+        this.position = position;
+        this.jobTitle = jobTitle != null ? jobTitle : position; // Default to position if null
+        this.manager = manager;
         this.baseSalary = baseSalary;
         this.hireDate = new java.sql.Date(hireDate.getTime()).toLocalDate();
         this.isActive = true;
@@ -84,6 +124,10 @@ public class Employee {
     public void setDepartment(String department) { this.department = department; }
     public String getPosition() { return position; }
     public void setPosition(String position) { this.position = position; }
+    public String getJobTitle() { return jobTitle; }
+    public void setJobTitle(String jobTitle) { this.jobTitle = jobTitle; }
+    public String getManager() { return manager; }
+    public void setManager(String manager) { this.manager = manager; }
     public double getBaseSalary() { return baseSalary; }
     public void setBaseSalary(double baseSalary) { this.baseSalary = baseSalary; }
     public double getSalary() { return baseSalary; } // Alias for database compatibility
@@ -109,8 +153,9 @@ public class Employee {
     
     @Override
     public String toString() {
-        return String.format("ID: %s | %s | %s | %s | $%.2f | %s", 
-                getFormattedEmployeeId(), getFullName(), department, position, baseSalary, 
+        String managerInfo = (manager != null && !manager.trim().isEmpty()) ? " | Manager: " + manager : "";
+        return String.format("ID: %s | %s | %s | %s%s | $%.2f | %s", 
+                getFormattedEmployeeId(), getFullName(), department, position, managerInfo, baseSalary, 
                 hireDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
     }
 }

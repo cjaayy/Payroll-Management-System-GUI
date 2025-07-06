@@ -168,6 +168,32 @@ public class EmployeeManager {
         return null;
     }
     
+    public Employee createEmployee(String firstName, String lastName, String email, String phone,
+                                 String department, String position, String jobTitle, String manager,
+                                 double baseSalary, LocalDate hireDate) {
+        System.out.println("Creating employee with employment details - Phone: " + phone + ", Job Title: " + jobTitle + ", Manager: " + manager);
+        
+        // Generate comprehensive employee ID
+        String comprehensiveId = generateNextComprehensiveEmployeeId(department, hireDate);
+        
+        Employee employee = new Employee(getNextEmployeeId(), firstName, lastName, email, 
+                                       department, position, baseSalary, hireDate);
+        employee.setPhone(phone);
+        employee.setJobTitle(jobTitle);
+        employee.setManager(manager);
+        
+        // Store the comprehensive ID as a custom property
+        employee.setComprehensiveEmployeeId(comprehensiveId);
+        
+        System.out.println("Employee created with ID: " + employee.getEmployeeId() + " (" + comprehensiveId + ")");
+        if (databaseDAO.insertEmployee(employee)) {
+            System.out.println("Employee successfully inserted");
+            return employee;
+        }
+        System.out.println("Failed to insert employee");
+        return null;
+    }
+    
     /**
      * Generate the next available comprehensive employee ID for a department/hire date combination
      * @param department The employee's department
@@ -225,6 +251,31 @@ public class EmployeeManager {
             employee.setPhone(phone);
             employee.setDepartment(department);
             employee.setPosition(position);
+            employee.setBaseSalary(baseSalary);
+            employee.setHireDate(hireDate);
+            return databaseDAO.updateEmployee(employee);
+        } else {
+            System.err.println("Employee not found for ID: " + stringId);
+        }
+        return false;
+    }
+    
+    public boolean updateEmployee(int employeeId, String firstName, String lastName, String email, 
+                                String phone, String department, String position, String jobTitle, String manager,
+                                double baseSalary, LocalDate hireDate) {
+        System.out.println("EmployeeManager: Updating employee ID " + employeeId + " with employment details - Job Title: " + jobTitle + ", Manager: " + manager);
+        String stringId = generateEmployeeStringId(employeeId);
+        Employee employee = databaseDAO.getEmployeeById(stringId);
+        if (employee != null) {
+            System.out.println("Found employee: " + employee.getFullName() + " (current email: " + employee.getEmail() + ", current hire date: " + employee.getHireDate() + ")");
+            employee.setFirstName(firstName);
+            employee.setLastName(lastName);
+            employee.setEmail(email);
+            employee.setPhone(phone);
+            employee.setDepartment(department);
+            employee.setPosition(position);
+            employee.setJobTitle(jobTitle);
+            employee.setManager(manager);
             employee.setBaseSalary(baseSalary);
             employee.setHireDate(hireDate);
             return databaseDAO.updateEmployee(employee);
