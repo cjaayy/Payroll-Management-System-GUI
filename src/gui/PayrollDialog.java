@@ -54,6 +54,7 @@ public class PayrollDialog extends JDialog {
     
     private void initializeComponents() {
         employeeIdField = new JTextField(20);
+        employeeIdField.setToolTipText("Enter employee ID (e.g., IT-202501-001, EMP001, or 1)");
         payPeriodField = new JTextField(20);
         basePayField = new JTextField(20);
         overtimeField = new JTextField(20);
@@ -166,7 +167,12 @@ public class PayrollDialog extends JDialog {
     }
     
     private void populateFields() {
-        employeeIdField.setText(String.valueOf(payroll.getEmployeeId()));
+        Employee employee = employeeManager.getEmployee(payroll.getEmployeeId());
+        if (employee != null) {
+            employeeIdField.setText(employee.getFormattedEmployeeId());
+        } else {
+            employeeIdField.setText(employeeManager.getFormattedEmployeeId(payroll.getEmployeeId()));
+        }
         payPeriodField.setText(payroll.getPayPeriod());
         basePayField.setText(String.valueOf(payroll.getBasePay()));
         overtimeField.setText(String.valueOf(payroll.getOvertime()));
@@ -182,7 +188,26 @@ public class PayrollDialog extends JDialog {
     
     private void updateEmployeeName() {
         try {
-            int employeeId = Integer.parseInt(employeeIdField.getText().trim());
+            String employeeIdText = employeeIdField.getText().trim();
+            if (employeeIdText.isEmpty()) {
+                employeeNameLabel.setText("");
+                return;
+            }
+            
+            int employeeId;
+            
+            // Try to parse as formatted ID first (e.g., "EMP001" or "IT-202501-001")
+            if (employeeIdText.toUpperCase().startsWith("EMP") || employeeIdText.matches("^[A-Z]{2,3}-\\d{6}-\\d{3}$")) {
+                employeeId = employeeManager.parseEmployeeId(employeeIdText);
+                if (employeeId == -1) {
+                    employeeNameLabel.setText("Invalid ID format");
+                    return;
+                }
+            } else {
+                // Try to parse as numeric ID
+                employeeId = Integer.parseInt(employeeIdText);
+            }
+            
             Employee employee = employeeManager.getEmployee(employeeId);
             
             if (employee != null && employee.isActive()) {
@@ -215,7 +240,18 @@ public class PayrollDialog extends JDialog {
             // Parse employee ID
             int employeeId;
             try {
-                employeeId = Integer.parseInt(employeeIdText);
+                // Try to parse as formatted ID first (e.g., "EMP001" or "IT-202501-001")
+                if (employeeIdText.toUpperCase().startsWith("EMP") || employeeIdText.matches("^[A-Z]{2,3}-\\d{6}-\\d{3}$")) {
+                    employeeId = employeeManager.parseEmployeeId(employeeIdText);
+                    if (employeeId == -1) {
+                        JOptionPane.showMessageDialog(this, "Invalid employee ID format. Use format: IT-202501-001, EMP001, or just the number.", 
+                                                    "Validation Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                } else {
+                    // Try to parse as numeric ID
+                    employeeId = Integer.parseInt(employeeIdText);
+                }
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(this, "Invalid employee ID format.", 
                                             "Validation Error", JOptionPane.ERROR_MESSAGE);

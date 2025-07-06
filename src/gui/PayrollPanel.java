@@ -52,6 +52,7 @@ public class PayrollPanel extends JPanel {
         
         // Employee ID field
         employeeIdField = new JTextField(10);
+        employeeIdField.setToolTipText("Enter employee ID (e.g., IT-202501-001, EMP001, or 1)");
         
         // Style buttons
         Font buttonFont = new Font("Arial", Font.BOLD, 12);
@@ -246,8 +247,23 @@ public class PayrollPanel extends JPanel {
         }
         
         try {
-            int employeeId = Integer.parseInt(employeeIdText);
-            Employee employee = mainApp.getEmployeeManager().getEmployee(employeeId);
+            int employeeId;
+            Employee employee;
+            
+            // Try to parse as formatted ID first (e.g., "EMP001" or "IT-202501-001")
+            if (employeeIdText.toUpperCase().startsWith("EMP") || employeeIdText.matches("^[A-Z]{2,3}-\\d{6}-\\d{3}$")) {
+                employeeId = mainApp.getEmployeeManager().parseEmployeeId(employeeIdText);
+                if (employeeId == -1) {
+                    JOptionPane.showMessageDialog(this, "Invalid employee ID format. Use format: IT-202501-001, EMP001, or just the number.", 
+                                                "Invalid Input", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+                employee = mainApp.getEmployeeManager().getEmployee(employeeId);
+            } else {
+                // Try to parse as numeric ID
+                employeeId = Integer.parseInt(employeeIdText);
+                employee = mainApp.getEmployeeManager().getEmployee(employeeId);
+            }
             
             if (employee == null) {
                 JOptionPane.showMessageDialog(this, "Employee not found.", 
@@ -272,7 +288,7 @@ public class PayrollPanel extends JPanel {
             }
             
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Please enter a valid employee ID.", 
+            JOptionPane.showMessageDialog(this, "Please enter a valid employee ID (e.g., IT-202501-001, EMP001, or 1).", 
                                         "Invalid Input", JOptionPane.ERROR_MESSAGE);
         }
     }

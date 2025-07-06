@@ -214,7 +214,7 @@ public class EmployeePanel extends JPanel {
         
         for (Employee emp : employees) {
             Object[] rowData = {
-                emp.getEmployeeId(),
+                emp.getFormattedEmployeeId(), // Use the Employee model's formatted ID method
                 emp.getFullName(),
                 emp.getEmail(),
                 emp.getPhone() == null ? "" : emp.getPhone(),
@@ -258,7 +258,8 @@ public class EmployeePanel extends JPanel {
             return;
         }
         
-        int employeeId = (Integer) tableModel.getValueAt(selectedRow, 0);
+        String formattedEmployeeId = (String) tableModel.getValueAt(selectedRow, 0);
+        int employeeId = mainApp.getEmployeeManager().parseEmployeeId(formattedEmployeeId);
         Employee employee = mainApp.getEmployeeManager().getEmployee(employeeId);
         
         if (employee != null) {
@@ -286,7 +287,8 @@ public class EmployeePanel extends JPanel {
             return;
         }
         
-        int employeeId = (Integer) tableModel.getValueAt(selectedRow, 0);
+        String formattedEmployeeId = (String) tableModel.getValueAt(selectedRow, 0);
+        int employeeId = mainApp.getEmployeeManager().parseEmployeeId(formattedEmployeeId);
         String employeeName = (String) tableModel.getValueAt(selectedRow, 1);
         
         int confirm = JOptionPane.showConfirmDialog(this, 
@@ -317,7 +319,7 @@ public class EmployeePanel extends JPanel {
         tableModel.setRowCount(0);
         for (Employee emp : results) {
             Object[] rowData = {
-                emp.getEmployeeId(),
+                emp.getFormattedEmployeeId(), // Use the Employee model's formatted ID method
                 emp.getFullName(),
                 emp.getEmail(),
                 emp.getPhone() == null ? "" : emp.getPhone(),
@@ -339,7 +341,8 @@ public class EmployeePanel extends JPanel {
             return;
         }
         
-        int employeeId = (Integer) tableModel.getValueAt(selectedRow, 0);
+        String formattedEmployeeId = (String) tableModel.getValueAt(selectedRow, 0);
+        int employeeId = mainApp.getEmployeeManager().parseEmployeeId(formattedEmployeeId);
         Employee employee = mainApp.getEmployeeManager().getEmployee(employeeId);
         
         if (employee != null) {
@@ -351,7 +354,7 @@ public class EmployeePanel extends JPanel {
         StringBuilder details = new StringBuilder();
         details.append("Employee Details\n");
         details.append("=================\n\n");
-        details.append("ID: ").append(employee.getEmployeeId()).append("\n");
+        details.append("ID: ").append(employee.getFormattedEmployeeId()).append("\n");
         details.append("Name: ").append(employee.getFullName()).append("\n");
         details.append("Email: ").append(employee.getEmail()).append("\n");
         details.append("Phone: ").append(employee.getPhone() == null ? "N/A" : employee.getPhone()).append("\n");
@@ -385,7 +388,8 @@ public class EmployeePanel extends JPanel {
             return;
         }
         
-        int employeeId = (Integer) tableModel.getValueAt(selectedRow, 0);
+        String formattedEmployeeId = (String) tableModel.getValueAt(selectedRow, 0);
+        int employeeId = mainApp.getEmployeeManager().parseEmployeeId(formattedEmployeeId);
         String employeeName = (String) tableModel.getValueAt(selectedRow, 1);
         String currentStatus = (String) tableModel.getValueAt(selectedRow, 8);
         

@@ -8,6 +8,7 @@ import java.time.format.DateTimeFormatter;
  */
 public class Employee {
     private int employeeId;
+    private String comprehensiveEmployeeId; // New field for comprehensive ID (e.g., IT-202501-001)
     private String firstName;
     private String lastName;
     private String email;
@@ -30,6 +31,7 @@ public class Employee {
         this.baseSalary = baseSalary;
         this.hireDate = hireDate;
         this.isActive = true;
+        this.comprehensiveEmployeeId = null; // Will be set by EmployeeManager
     }
     
     // Constructor for database operations
@@ -60,11 +62,16 @@ public class Employee {
         this.baseSalary = baseSalary;
         this.hireDate = new java.sql.Date(hireDate.getTime()).toLocalDate();
         this.isActive = true;
+        this.comprehensiveEmployeeId = null; // Will be generated if needed
     }
     
     // Getters and setters
     public int getEmployeeId() { return employeeId; }
     public void setEmployeeId(int employeeId) { this.employeeId = employeeId; }
+    
+    public String getComprehensiveEmployeeId() { return comprehensiveEmployeeId; }
+    public void setComprehensiveEmployeeId(String comprehensiveEmployeeId) { this.comprehensiveEmployeeId = comprehensiveEmployeeId; }
+    
     public String getFirstName() { return firstName; }
     public void setFirstName(String firstName) { this.firstName = firstName; }
     public String getLastName() { return lastName; }
@@ -89,10 +96,21 @@ public class Employee {
         return firstName + " " + lastName;
     }
     
+    /**
+     * Get formatted employee ID (e.g., "IT-202501-001" or "EMP001" as fallback)
+     * @return Formatted employee ID string
+     */
+    public String getFormattedEmployeeId() {
+        if (comprehensiveEmployeeId != null && !comprehensiveEmployeeId.trim().isEmpty()) {
+            return comprehensiveEmployeeId;
+        }
+        return String.format("EMP%03d", employeeId);
+    }
+    
     @Override
     public String toString() {
-        return String.format("ID: %d | %s | %s | %s | $%.2f | %s", 
-                employeeId, getFullName(), department, position, baseSalary, 
+        return String.format("ID: %s | %s | %s | %s | $%.2f | %s", 
+                getFormattedEmployeeId(), getFullName(), department, position, baseSalary, 
                 hireDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
     }
 }

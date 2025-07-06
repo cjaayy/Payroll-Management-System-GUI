@@ -2,6 +2,7 @@ package gui;
 
 import models.Employee;
 import managers.EmployeeManager;
+import managers.DepartmentPositionManager;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -18,12 +19,13 @@ public class EmployeeDialog extends JDialog {
     private Employee employee;
     private boolean confirmed = false;
     
+    private JLabel employeeIdLabel;
     private JTextField firstNameField;
     private JTextField lastNameField;
     private JTextField emailField;
     private JTextField phoneField;
-    private JTextField departmentField;
-    private JTextField positionField;
+    private JComboBox<String> departmentComboBox;
+    private JComboBox<String> positionComboBox;
     private JTextField salaryField;
     private JTextField hireDateField;
     
@@ -48,12 +50,21 @@ public class EmployeeDialog extends JDialog {
     }
     
     private void initializeComponents() {
+        employeeIdLabel = new JLabel();
         firstNameField = new JTextField(20);
         lastNameField = new JTextField(20);
         emailField = new JTextField(20);
         phoneField = new JTextField(20);
-        departmentField = new JTextField(20);
-        positionField = new JTextField(20);
+        
+        // Initialize department combo box with all departments
+        departmentComboBox = new JComboBox<>(DepartmentPositionManager.getAllDepartments());
+        departmentComboBox.setEditable(false);
+        departmentComboBox.addActionListener(e -> updatePositionComboBox());
+        
+        // Initialize position combo box (will be populated based on department selection)
+        positionComboBox = new JComboBox<>(new String[0]);
+        positionComboBox.setEditable(false);
+        
         salaryField = new JTextField(20);
         hireDateField = new JTextField(20);
         
@@ -71,6 +82,32 @@ public class EmployeeDialog extends JDialog {
         
         // Add tooltip for salary field
         salaryField.setToolTipText("Maximum salary: $99,999,999.99");
+        
+        // Set employee ID label
+        if (employee != null) {
+            String displayId = employee.getFormattedEmployeeId();
+            employeeIdLabel.setText("Employee ID: " + displayId);
+            employeeIdLabel.setFont(new Font("Arial", Font.BOLD, 12));
+            employeeIdLabel.setForeground(new Color(70, 130, 180));
+        } else {
+            employeeIdLabel.setText("Employee ID: (Auto-generated based on department and hire date)");
+            employeeIdLabel.setFont(new Font("Arial", Font.ITALIC, 12));
+            employeeIdLabel.setForeground(new Color(100, 100, 100));
+        }
+    }
+    
+    /**
+     * Update the position combo box based on selected department
+     */
+    private void updatePositionComboBox() {
+        String selectedDepartment = (String) departmentComboBox.getSelectedItem();
+        if (selectedDepartment != null) {
+            String[] positions = DepartmentPositionManager.getPositionsForDepartment(selectedDepartment);
+            positionComboBox.removeAllItems();
+            for (String position : positions) {
+                positionComboBox.addItem(position);
+            }
+        }
     }
     
     private void setupLayout() {
@@ -81,42 +118,50 @@ public class EmployeeDialog extends JDialog {
         gbc.insets = new Insets(5, 5, 5, 5);
         gbc.anchor = GridBagConstraints.WEST;
         
+        // Employee ID - spans across both columns
         gbc.gridx = 0; gbc.gridy = 0;
+        gbc.gridwidth = 2;
+        formPanel.add(employeeIdLabel, gbc);
+        
+        // Reset gridwidth for other components
+        gbc.gridwidth = 1;
+        
+        gbc.gridx = 0; gbc.gridy = 1;
         formPanel.add(new JLabel("First Name:"), gbc);
         gbc.gridx = 1;
         formPanel.add(firstNameField, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 1;
+        gbc.gridx = 0; gbc.gridy = 2;
         formPanel.add(new JLabel("Last Name:"), gbc);
         gbc.gridx = 1;
         formPanel.add(lastNameField, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 2;
+        gbc.gridx = 0; gbc.gridy = 3;
         formPanel.add(new JLabel("Email:"), gbc);
         gbc.gridx = 1;
         formPanel.add(emailField, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 3;
+        gbc.gridx = 0; gbc.gridy = 4;
         formPanel.add(new JLabel("Phone:"), gbc);
         gbc.gridx = 1;
         formPanel.add(phoneField, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 4;
+        gbc.gridx = 0; gbc.gridy = 5;
         formPanel.add(new JLabel("Department:"), gbc);
         gbc.gridx = 1;
-        formPanel.add(departmentField, gbc);
-        
-        gbc.gridx = 0; gbc.gridy = 5;
-        formPanel.add(new JLabel("Position:"), gbc);
-        gbc.gridx = 1;
-        formPanel.add(positionField, gbc);
+        formPanel.add(departmentComboBox, gbc);
         
         gbc.gridx = 0; gbc.gridy = 6;
+        formPanel.add(new JLabel("Position:"), gbc);
+        gbc.gridx = 1;
+        formPanel.add(positionComboBox, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 7;
         formPanel.add(new JLabel("Base Salary:"), gbc);
         gbc.gridx = 1;
         formPanel.add(salaryField, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 7;
+        gbc.gridx = 0; gbc.gridy = 8;
         formPanel.add(new JLabel("Hire Date:"), gbc);
         gbc.gridx = 1;
         formPanel.add(hireDateField, gbc);
@@ -151,8 +196,12 @@ public class EmployeeDialog extends JDialog {
         lastNameField.setText(employee.getLastName());
         emailField.setText(employee.getEmail());
         phoneField.setText(employee.getPhone() == null ? "" : employee.getPhone());
-        departmentField.setText(employee.getDepartment());
-        positionField.setText(employee.getPosition());
+        
+        // Set department and update positions
+        departmentComboBox.setSelectedItem(employee.getDepartment());
+        updatePositionComboBox();
+        positionComboBox.setSelectedItem(employee.getPosition());
+        
         salaryField.setText(String.valueOf(employee.getBaseSalary()));
         hireDateField.setText(employee.getHireDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
     }
@@ -163,14 +212,15 @@ public class EmployeeDialog extends JDialog {
             String lastName = lastNameField.getText().trim();
             String email = emailField.getText().trim();
             String phone = phoneField.getText().trim();
-            String department = departmentField.getText().trim();
-            String position = positionField.getText().trim();
+            String department = (String) departmentComboBox.getSelectedItem();
+            String position = (String) positionComboBox.getSelectedItem();
             String salaryText = salaryField.getText().trim();
             String hireDateText = hireDateField.getText().trim();
             
             // Validate required fields
             if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || 
-                department.isEmpty() || position.isEmpty() || salaryText.isEmpty() || hireDateText.isEmpty()) {
+                department == null || department.isEmpty() || position == null || position.isEmpty() || 
+                salaryText.isEmpty() || hireDateText.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Please fill in all required fields.\nNote: Phone is optional.", 
                                             "Validation Error", JOptionPane.ERROR_MESSAGE);
                 return;

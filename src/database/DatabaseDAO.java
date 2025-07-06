@@ -15,6 +15,7 @@ public interface DatabaseDAO {
     
     // Employee operations
     List<Employee> getAllEmployees();
+    List<Employee> getAllEmployeesForIdCheck(); // Get all employees (including inactive) for ID conflict checking
     Employee getEmployeeById(String employeeId);
     boolean insertEmployee(Employee employee);
     boolean updateEmployee(Employee employee);

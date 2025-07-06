@@ -73,6 +73,16 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
                         rs.getDate("hire_date"),
                         rs.getDouble("salary")
                     );
+                    // Set comprehensive employee ID if available
+                    try {
+                        String comprehensiveId = rs.getString("comprehensive_employee_id");
+                        if (comprehensiveId != null && !comprehensiveId.trim().isEmpty()) {
+                            employee.setComprehensiveEmployeeId(comprehensiveId);
+                        }
+                    } catch (SQLException e) {
+                        // Column might not exist in older database versions
+                        System.out.println("Note: comprehensive_employee_id column not found. Using legacy ID format.");
+                    }
                     employees.add(employee);
                 } catch (Exception e) {
                     System.err.println("Error creating employee from DB record: " + e.getMessage());
@@ -87,6 +97,49 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
     }
     
     @Override
+    public List<Employee> getAllEmployeesForIdCheck() {
+        List<Employee> employees = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(DatabaseConfig.QUERY_SELECT_ALL_EMPLOYEES_FOR_ID_CHECK);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            while (rs.next()) {
+                try {
+                    Employee employee = new Employee(
+                        rs.getString("employee_id"),
+                        rs.getString("first_name"),
+                        rs.getString("last_name"),
+                        rs.getString("email"),
+                        rs.getString("phone"),
+                        rs.getString("department"),
+                        rs.getString("position"),
+                        rs.getDate("hire_date"),
+                        rs.getDouble("salary")
+                    );
+                    // Set comprehensive employee ID if available
+                    try {
+                        String comprehensiveId = rs.getString("comprehensive_employee_id");
+                        if (comprehensiveId != null && !comprehensiveId.trim().isEmpty()) {
+                            employee.setComprehensiveEmployeeId(comprehensiveId);
+                        }
+                    } catch (SQLException e) {
+                        // Column might not exist in older database versions
+                        System.out.println("Note: comprehensive_employee_id column not found. Using legacy ID format.");
+                    }
+                    employees.add(employee);
+                } catch (Exception e) {
+                    System.err.println("Error creating employee from DB record: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error fetching employees for ID check: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return employees;
+    }
+    
+    @Override
     public Employee getEmployeeById(String employeeId) {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(DatabaseConfig.QUERY_SELECT_EMPLOYEE_BY_ID)) {
@@ -95,7 +148,7 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
             ResultSet rs = stmt.executeQuery();
             
             if (rs.next()) {
-                return new Employee(
+                Employee employee = new Employee(
                     rs.getString("employee_id"),
                     rs.getString("first_name"),
                     rs.getString("last_name"),
@@ -106,6 +159,17 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
                     rs.getDate("hire_date"),
                     rs.getDouble("salary")
                 );
+                // Set comprehensive employee ID if available
+                try {
+                    String comprehensiveId = rs.getString("comprehensive_employee_id");
+                    if (comprehensiveId != null && !comprehensiveId.trim().isEmpty()) {
+                        employee.setComprehensiveEmployeeId(comprehensiveId);
+                    }
+                } catch (SQLException e) {
+                    // Column might not exist in older database versions
+                    System.out.println("Note: comprehensive_employee_id column not found for employee lookup. Using legacy ID format.");
+                }
+                return employee;
             }
         } catch (SQLException e) {
             System.err.println("Error fetching employee: " + e.getMessage());
@@ -118,26 +182,47 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
     public boolean insertEmployee(Employee employee) {
         System.out.println("Inserting employee: " + employee.getFullName() + " with phone: " + employee.getPhone());
         
+        // Check if comprehensive_employee_id column exists
+        boolean hasComprehensiveIdColumn = checkComprehensiveIdColumnExists();
+        
+        // Use appropriate query based on column availability
+        String insertQuery = hasComprehensiveIdColumn ? 
+            DatabaseConfig.QUERY_INSERT_EMPLOYEE : 
+            "INSERT INTO employees (employee_id, first_name, last_name, email, phone, department, position, hire_date, salary) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        
         // Try to insert with the given ID, if it fails due to duplicate, try with a higher ID
         int maxRetries = 10;
         int originalId = employee.getEmployeeId();
         
         for (int attempt = 0; attempt < maxRetries; attempt++) {
             try (Connection conn = DatabaseConnection.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement(DatabaseConfig.QUERY_INSERT_EMPLOYEE)) {
+                 PreparedStatement stmt = conn.prepareStatement(insertQuery)) {
                 
                 int currentId = originalId + attempt;
                 String employeeIdString = String.format("EMP%03d", currentId);
                 
                 stmt.setString(1, employeeIdString);
-                stmt.setString(2, employee.getFirstName());
-                stmt.setString(3, employee.getLastName());
-                stmt.setString(4, employee.getEmail());
-                stmt.setString(5, employee.getPhone() == null || employee.getPhone().trim().isEmpty() ? null : employee.getPhone());
-                stmt.setString(6, employee.getDepartment());
-                stmt.setString(7, employee.getPosition());
-                stmt.setDate(8, java.sql.Date.valueOf(employee.getHireDate()));
-                stmt.setDouble(9, employee.getSalary());
+                
+                if (hasComprehensiveIdColumn) {
+                    stmt.setString(2, employee.getComprehensiveEmployeeId());
+                    stmt.setString(3, employee.getFirstName());
+                    stmt.setString(4, employee.getLastName());
+                    stmt.setString(5, employee.getEmail());
+                    stmt.setString(6, employee.getPhone() == null || employee.getPhone().trim().isEmpty() ? null : employee.getPhone());
+                    stmt.setString(7, employee.getDepartment());
+                    stmt.setString(8, employee.getPosition());
+                    stmt.setDate(9, java.sql.Date.valueOf(employee.getHireDate()));
+                    stmt.setDouble(10, employee.getSalary());
+                } else {
+                    stmt.setString(2, employee.getFirstName());
+                    stmt.setString(3, employee.getLastName());
+                    stmt.setString(4, employee.getEmail());
+                    stmt.setString(5, employee.getPhone() == null || employee.getPhone().trim().isEmpty() ? null : employee.getPhone());
+                    stmt.setString(6, employee.getDepartment());
+                    stmt.setString(7, employee.getPosition());
+                    stmt.setDate(8, java.sql.Date.valueOf(employee.getHireDate()));
+                    stmt.setDouble(9, employee.getSalary());
+                }
                 
                 int rowsAffected = stmt.executeUpdate();
                 if (rowsAffected > 0) {
@@ -170,21 +255,43 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
         System.out.println("Updating employee: " + employee.getFullName() + 
                           " (ID: " + employee.getEmployeeId() + ", Email: " + employee.getEmail() + ")");
         
+        // Check if comprehensive_employee_id column exists
+        boolean hasComprehensiveIdColumn = checkComprehensiveIdColumnExists();
+        
+        // Use appropriate query based on column availability
+        String updateQuery = hasComprehensiveIdColumn ? 
+            DatabaseConfig.QUERY_UPDATE_EMPLOYEE : 
+            "UPDATE employees SET first_name = ?, last_name = ?, email = ?, phone = ?, department = ?, position = ?, hire_date = ?, salary = ? WHERE employee_id = ?";
+        
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(DatabaseConfig.QUERY_UPDATE_EMPLOYEE)) {
+             PreparedStatement stmt = conn.prepareStatement(updateQuery)) {
             
-            stmt.setString(1, employee.getFirstName());
-            stmt.setString(2, employee.getLastName());
-            stmt.setString(3, employee.getEmail());
-            stmt.setString(4, employee.getPhone() == null || employee.getPhone().trim().isEmpty() ? null : employee.getPhone());
-            stmt.setString(5, employee.getDepartment());
-            stmt.setString(6, employee.getPosition());
-            stmt.setDate(7, java.sql.Date.valueOf(employee.getHireDate()));
-            stmt.setDouble(8, employee.getSalary());
-            String empIdString = String.format("EMP%03d", employee.getEmployeeId());
-            stmt.setString(9, empIdString);
+            if (hasComprehensiveIdColumn) {
+                stmt.setString(1, employee.getComprehensiveEmployeeId());
+                stmt.setString(2, employee.getFirstName());
+                stmt.setString(3, employee.getLastName());
+                stmt.setString(4, employee.getEmail());
+                stmt.setString(5, employee.getPhone() == null || employee.getPhone().trim().isEmpty() ? null : employee.getPhone());
+                stmt.setString(6, employee.getDepartment());
+                stmt.setString(7, employee.getPosition());
+                stmt.setDate(8, java.sql.Date.valueOf(employee.getHireDate()));
+                stmt.setDouble(9, employee.getSalary());
+                String empIdString = String.format("EMP%03d", employee.getEmployeeId());
+                stmt.setString(10, empIdString);
+            } else {
+                stmt.setString(1, employee.getFirstName());
+                stmt.setString(2, employee.getLastName());
+                stmt.setString(3, employee.getEmail());
+                stmt.setString(4, employee.getPhone() == null || employee.getPhone().trim().isEmpty() ? null : employee.getPhone());
+                stmt.setString(5, employee.getDepartment());
+                stmt.setString(6, employee.getPosition());
+                stmt.setDate(7, java.sql.Date.valueOf(employee.getHireDate()));
+                stmt.setDouble(8, employee.getSalary());
+                String empIdString = String.format("EMP%03d", employee.getEmployeeId());
+                stmt.setString(9, empIdString);
+            }
             
-            System.out.println("Executing update for employee ID: " + empIdString);
+            System.out.println("Executing update for employee ID: " + String.format("EMP%03d", employee.getEmployeeId()));
             
             int rowsAffected = stmt.executeUpdate();
             System.out.println("Update rows affected: " + rowsAffected);
@@ -371,5 +478,27 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
     @Override
     public void closeConnection() {
         DatabaseConnection.closeConnection();
+    }
+    
+    /**
+     * Check if the comprehensive_employee_id column exists in the employees table
+     * @return true if the column exists, false otherwise
+     */
+    private boolean checkComprehensiveIdColumnExists() {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                 "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS " +
+                 "WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'employees' AND COLUMN_NAME = 'comprehensive_employee_id'")) {
+            
+            stmt.setString(1, DatabaseConfig.DB_NAME);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            System.err.println("Error checking for comprehensive_employee_id column: " + e.getMessage());
+        }
+        return false;
     }
 }
