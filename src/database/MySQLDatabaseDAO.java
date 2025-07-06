@@ -116,46 +116,106 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
     
     @Override
     public boolean insertEmployee(Employee employee) {
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(DatabaseConfig.QUERY_INSERT_EMPLOYEE)) {
-            
-            stmt.setString(1, String.format("EMP%03d", employee.getEmployeeId()));
-            stmt.setString(2, employee.getFirstName());
-            stmt.setString(3, employee.getLastName());
-            stmt.setString(4, employee.getEmail());
-            stmt.setString(5, employee.getPhone());
-            stmt.setString(6, employee.getDepartment());
-            stmt.setString(7, employee.getPosition());
-            stmt.setDate(8, java.sql.Date.valueOf(employee.getHireDate()));
-            stmt.setDouble(9, employee.getSalary());
-            
-            int rowsAffected = stmt.executeUpdate();
-            return rowsAffected > 0;
-        } catch (SQLException e) {
-            System.err.println("Error inserting employee: " + e.getMessage());
-            e.printStackTrace();
+        System.out.println("Inserting employee: " + employee.getFullName() + " with phone: " + employee.getPhone());
+        
+        // Try to insert with the given ID, if it fails due to duplicate, try with a higher ID
+        int maxRetries = 10;
+        int originalId = employee.getEmployeeId();
+        
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            try (Connection conn = DatabaseConnection.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(DatabaseConfig.QUERY_INSERT_EMPLOYEE)) {
+                
+                int currentId = originalId + attempt;
+                String employeeIdString = String.format("EMP%03d", currentId);
+                
+                stmt.setString(1, employeeIdString);
+                stmt.setString(2, employee.getFirstName());
+                stmt.setString(3, employee.getLastName());
+                stmt.setString(4, employee.getEmail());
+                stmt.setString(5, employee.getPhone() == null || employee.getPhone().trim().isEmpty() ? null : employee.getPhone());
+                stmt.setString(6, employee.getDepartment());
+                stmt.setString(7, employee.getPosition());
+                stmt.setDate(8, java.sql.Date.valueOf(employee.getHireDate()));
+                stmt.setDouble(9, employee.getSalary());
+                
+                int rowsAffected = stmt.executeUpdate();
+                if (rowsAffected > 0) {
+                    // Update the employee object with the actual ID used
+                    employee.setEmployeeId(currentId);
+                    System.out.println("Employee inserted successfully with ID: " + employeeIdString);
+                    return true;
+                }
+                
+            } catch (SQLException e) {
+                if (e.getMessage().contains("Duplicate entry") && attempt < maxRetries - 1) {
+                    System.out.println("ID conflict for EMP" + String.format("%03d", originalId + attempt) + 
+                                     ", trying next ID...");
+                    continue; // Try next ID
+                } else {
+                    System.err.println("Error inserting employee: " + e.getMessage());
+                    if (attempt == maxRetries - 1) {
+                        e.printStackTrace();
+                    }
+                }
+            }
         }
+        
+        System.err.println("Failed to insert employee after " + maxRetries + " attempts");
         return false;
     }
     
     @Override
     public boolean updateEmployee(Employee employee) {
+        System.out.println("Updating employee: " + employee.getFullName() + 
+                          " (ID: " + employee.getEmployeeId() + ", Email: " + employee.getEmail() + ")");
+        
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(DatabaseConfig.QUERY_UPDATE_EMPLOYEE)) {
             
             stmt.setString(1, employee.getFirstName());
             stmt.setString(2, employee.getLastName());
             stmt.setString(3, employee.getEmail());
-            stmt.setString(4, employee.getPhone());
+            stmt.setString(4, employee.getPhone() == null || employee.getPhone().trim().isEmpty() ? null : employee.getPhone());
             stmt.setString(5, employee.getDepartment());
             stmt.setString(6, employee.getPosition());
-            stmt.setDouble(7, employee.getSalary());
-            stmt.setString(8, String.format("EMP%03d", employee.getEmployeeId()));
+            stmt.setDate(7, java.sql.Date.valueOf(employee.getHireDate()));
+            stmt.setDouble(8, employee.getSalary());
+            String empIdString = String.format("EMP%03d", employee.getEmployeeId());
+            stmt.setString(9, empIdString);
+            
+            System.out.println("Executing update for employee ID: " + empIdString);
             
             int rowsAffected = stmt.executeUpdate();
+            System.out.println("Update rows affected: " + rowsAffected);
             return rowsAffected > 0;
         } catch (SQLException e) {
             System.err.println("Error updating employee: " + e.getMessage());
+            
+            // Check if it's an email duplicate issue
+            if (e.getMessage().contains("Duplicate entry") && e.getMessage().contains("email")) {
+                System.err.println("Email conflict detected. Checking if email belongs to same employee...");
+                
+                // Try to find if there's another employee with the same email
+                try (Connection conn = DatabaseConnection.getConnection();
+                     PreparedStatement checkStmt = conn.prepareStatement(
+                         "SELECT employee_id FROM employees WHERE email = ? AND employee_id != ?")) {
+                    
+                    checkStmt.setString(1, employee.getEmail());
+                    checkStmt.setString(2, String.format("EMP%03d", employee.getEmployeeId()));
+                    
+                    ResultSet rs = checkStmt.executeQuery();
+                    if (rs.next()) {
+                        System.err.println("Found another employee with same email: " + rs.getString("employee_id"));
+                        return false;
+                    } else {
+                        System.err.println("No other employee has this email. This might be a database issue.");
+                    }
+                } catch (SQLException checkEx) {
+                    System.err.println("Error checking email conflict: " + checkEx.getMessage());
+                }
+            }
+            
             e.printStackTrace();
         }
         return false;

@@ -73,11 +73,6 @@ echo }
 
 echo DatabaseConfig.java updated successfully!
 echo.
-echo Testing database connection...
-javac -cp "lib/*;src" -d classes src/database/DatabaseTest.java src/database/*.java src/models/*.java
-java -cp "lib/*;classes" database.DatabaseTest
-
-echo.
 echo Configuration complete! You can now run the application with:
 echo run.bat
 echo.

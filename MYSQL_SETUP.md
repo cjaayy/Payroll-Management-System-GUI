@@ -23,10 +23,10 @@ After placing the JAR file in the `lib/` directory:
 
 ```bash
 # Test compilation
-javac -cp "lib/*;src" -d classes src/database/DatabaseTest.java src/database/*.java src/models/*.java
+javac -cp "lib/*;src" -d classes src/database/*.java src/models/*.java src/managers/*.java src/gui/*.java
 
-# Test database connection
-java -cp "lib/*;classes" database.DatabaseTest
+# Run the application
+java -cp "lib/*;classes" gui.PayrollManagementSystemGUI
 ```
 
 ## Common Issues
@@ -63,8 +63,7 @@ Payroll Management System GUI/
 │   │   ├── DatabaseConnection.java
 │   │   ├── DatabaseConfig.java
 │   │   ├── DatabaseDAO.java
-│   │   ├── MySQLDatabaseDAO.java
-│   │   └── DatabaseTest.java
+│   │   └── MySQLDatabaseDAO.java
 │   └── ... (other source files)
 └── classes/  # Compiled .class files
 ```

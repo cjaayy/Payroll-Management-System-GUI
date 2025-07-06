@@ -21,6 +21,7 @@ public class EmployeeDialog extends JDialog {
     private JTextField firstNameField;
     private JTextField lastNameField;
     private JTextField emailField;
+    private JTextField phoneField;
     private JTextField departmentField;
     private JTextField positionField;
     private JTextField salaryField;
@@ -42,7 +43,7 @@ public class EmployeeDialog extends JDialog {
             populateFields();
         }
         
-        setSize(400, 350);
+        setSize(400, 400);
         setLocationRelativeTo(parent);
     }
     
@@ -50,6 +51,7 @@ public class EmployeeDialog extends JDialog {
         firstNameField = new JTextField(20);
         lastNameField = new JTextField(20);
         emailField = new JTextField(20);
+        phoneField = new JTextField(20);
         departmentField = new JTextField(20);
         positionField = new JTextField(20);
         salaryField = new JTextField(20);
@@ -66,6 +68,9 @@ public class EmployeeDialog extends JDialog {
         
         // Add placeholder text for date field
         hireDateField.setToolTipText("Format: YYYY-MM-DD");
+        
+        // Add tooltip for salary field
+        salaryField.setToolTipText("Maximum salary: $99,999,999.99");
     }
     
     private void setupLayout() {
@@ -92,21 +97,26 @@ public class EmployeeDialog extends JDialog {
         formPanel.add(emailField, gbc);
         
         gbc.gridx = 0; gbc.gridy = 3;
+        formPanel.add(new JLabel("Phone:"), gbc);
+        gbc.gridx = 1;
+        formPanel.add(phoneField, gbc);
+        
+        gbc.gridx = 0; gbc.gridy = 4;
         formPanel.add(new JLabel("Department:"), gbc);
         gbc.gridx = 1;
         formPanel.add(departmentField, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 4;
+        gbc.gridx = 0; gbc.gridy = 5;
         formPanel.add(new JLabel("Position:"), gbc);
         gbc.gridx = 1;
         formPanel.add(positionField, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 5;
+        gbc.gridx = 0; gbc.gridy = 6;
         formPanel.add(new JLabel("Base Salary:"), gbc);
         gbc.gridx = 1;
         formPanel.add(salaryField, gbc);
         
-        gbc.gridx = 0; gbc.gridy = 6;
+        gbc.gridx = 0; gbc.gridy = 7;
         formPanel.add(new JLabel("Hire Date:"), gbc);
         gbc.gridx = 1;
         formPanel.add(hireDateField, gbc);
@@ -140,6 +150,7 @@ public class EmployeeDialog extends JDialog {
         firstNameField.setText(employee.getFirstName());
         lastNameField.setText(employee.getLastName());
         emailField.setText(employee.getEmail());
+        phoneField.setText(employee.getPhone() == null ? "" : employee.getPhone());
         departmentField.setText(employee.getDepartment());
         positionField.setText(employee.getPosition());
         salaryField.setText(String.valueOf(employee.getBaseSalary()));
@@ -151,6 +162,7 @@ public class EmployeeDialog extends JDialog {
             String firstName = firstNameField.getText().trim();
             String lastName = lastNameField.getText().trim();
             String email = emailField.getText().trim();
+            String phone = phoneField.getText().trim();
             String department = departmentField.getText().trim();
             String position = positionField.getText().trim();
             String salaryText = salaryField.getText().trim();
@@ -159,7 +171,29 @@ public class EmployeeDialog extends JDialog {
             // Validate required fields
             if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || 
                 department.isEmpty() || position.isEmpty() || salaryText.isEmpty() || hireDateText.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Please fill in all fields.", 
+                JOptionPane.showMessageDialog(this, "Please fill in all required fields.\nNote: Phone is optional.", 
+                                            "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            // Validate email format
+            if (!isValidEmail(email)) {
+                JOptionPane.showMessageDialog(this, "Please enter a valid email address.", 
+                                            "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            // Check for duplicate email (for updates, exclude current employee)
+            int excludeId = (employee != null) ? employee.getEmployeeId() : -1;
+            if (!employeeManager.isEmailAvailable(email, excludeId)) {
+                JOptionPane.showMessageDialog(this, "This email address is already in use by another employee.", 
+                                            "Validation Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            // Validate phone format (optional field)
+            if (!phone.isEmpty() && !isValidPhone(phone)) {
+                JOptionPane.showMessageDialog(this, "Please enter a valid phone number (e.g., 123-456-7890).", 
                                             "Validation Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
@@ -168,13 +202,20 @@ public class EmployeeDialog extends JDialog {
             double salary;
             try {
                 salary = Double.parseDouble(salaryText);
+                System.out.println("Parsed salary: " + salary);
                 if (salary < 0) {
                     JOptionPane.showMessageDialog(this, "Salary must be a positive number.", 
                                                 "Validation Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
+                // Check if salary exceeds database limit (DECIMAL(10,2) = max 99,999,999.99)
+                if (salary > 99999999.99) {
+                    JOptionPane.showMessageDialog(this, "Salary cannot exceed $99,999,999.99.", 
+                                                "Validation Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
             } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Invalid salary format.", 
+                JOptionPane.showMessageDialog(this, "Invalid salary format. Please enter a valid number.", 
                                             "Validation Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
@@ -191,13 +232,27 @@ public class EmployeeDialog extends JDialog {
             
             if (employee == null) {
                 // Add new employee
-                employeeManager.createEmployee(firstName, lastName, email, department, position, salary, hireDate);
-                JOptionPane.showMessageDialog(this, "Employee added successfully!");
+                Employee newEmployee = employeeManager.createEmployee(firstName, lastName, email, 
+                    phone.isEmpty() ? null : phone, department, position, salary, hireDate);
+                if (newEmployee != null) {
+                    JOptionPane.showMessageDialog(this, "Employee added successfully!");
+                } else {
+                    JOptionPane.showMessageDialog(this, "Failed to add employee.", 
+                                                "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
             } else {
                 // Update existing employee
-                employeeManager.updateEmployee(employee.getEmployeeId(), firstName, lastName, 
-                                             email, department, position, salary);
-                JOptionPane.showMessageDialog(this, "Employee updated successfully!");
+                employee.setPhone(phone.isEmpty() ? null : phone);
+                boolean updateSuccess = employeeManager.updateEmployee(employee.getEmployeeId(), firstName, lastName, 
+                                             email, phone.isEmpty() ? null : phone, department, position, salary, hireDate);
+                if (updateSuccess) {
+                    JOptionPane.showMessageDialog(this, "Employee updated successfully!");
+                } else {
+                    JOptionPane.showMessageDialog(this, "Failed to update employee. Please check for duplicate email addresses.", 
+                                                "Update Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
             }
             
             confirmed = true;
@@ -207,6 +262,17 @@ public class EmployeeDialog extends JDialog {
             JOptionPane.showMessageDialog(this, "Error saving employee: " + ex.getMessage(), 
                                         "Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
+    
+    private boolean isValidEmail(String email) {
+        String emailPattern = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
+        return email.matches(emailPattern);
+    }
+    
+    private boolean isValidPhone(String phone) {
+        // Allow various phone formats: 123-456-7890, (123) 456-7890, 123.456.7890, 1234567890
+        String phonePattern = "^[\\+]?[1-9]?[0-9]{0,2}[-\\s\\.]?\\(?[0-9]{3}\\)?[-\\s\\.]?[0-9]{3}[-\\s\\.]?[0-9]{4}$";
+        return phone.matches(phonePattern);
     }
     
     public boolean isConfirmed() {

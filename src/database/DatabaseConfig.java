@@ -23,7 +23,7 @@ public class DatabaseConfig {
     public static final String QUERY_INSERT_USER = "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
     public static final String QUERY_SELECT_ALL_EMPLOYEES = "SELECT * FROM employees WHERE status = 'ACTIVE'";
     public static final String QUERY_INSERT_EMPLOYEE = "INSERT INTO employees (employee_id, first_name, last_name, email, phone, department, position, hire_date, salary) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    public static final String QUERY_UPDATE_EMPLOYEE = "UPDATE employees SET first_name = ?, last_name = ?, email = ?, phone = ?, department = ?, position = ?, salary = ? WHERE employee_id = ?";
+    public static final String QUERY_UPDATE_EMPLOYEE = "UPDATE employees SET first_name = ?, last_name = ?, email = ?, phone = ?, department = ?, position = ?, hire_date = ?, salary = ? WHERE employee_id = ?";
     public static final String QUERY_DELETE_EMPLOYEE = "UPDATE employees SET status = 'INACTIVE' WHERE employee_id = ?";
     public static final String QUERY_SELECT_EMPLOYEE_BY_ID = "SELECT * FROM employees WHERE employee_id = ? AND status = 'ACTIVE'";
 

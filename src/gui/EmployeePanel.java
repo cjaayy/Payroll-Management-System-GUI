@@ -17,6 +17,7 @@ public class EmployeePanel extends JPanel {
     private JTable employeeTable;
     private DefaultTableModel tableModel;
     private JButton addButton, editButton, deleteButton, searchButton, backButton;
+    private JButton viewButton, refreshButton, toggleStatusButton;
     private JTextField searchField;
     
     public EmployeePanel(PayrollManagementSystemGUI mainApp) {
@@ -31,7 +32,7 @@ public class EmployeePanel extends JPanel {
         setBackground(new Color(240, 248, 255));
         
         // Table setup
-        String[] columnNames = {"ID", "Name", "Email", "Department", "Position", "Salary", "Hire Date"};
+        String[] columnNames = {"ID", "Name", "Email", "Phone", "Department", "Position", "Salary", "Hire Date", "Status"};
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -49,8 +50,13 @@ public class EmployeePanel extends JPanel {
         searchButton = new JButton("Search");
         backButton = new JButton("Back to Main Menu");
         
+        viewButton = new JButton("View Details");
+        refreshButton = new JButton("Refresh");
+        toggleStatusButton = new JButton("Toggle Status");
+        
         // Search field
         searchField = new JTextField(20);
+        searchField.setToolTipText("Search by name, email, phone, department, position, or ID");
         
         // Style buttons
         Font buttonFont = new Font("Arial", Font.BOLD, 12);
@@ -75,6 +81,18 @@ public class EmployeePanel extends JPanel {
         backButton.setFont(buttonFont);
         backButton.setBackground(new Color(128, 128, 128));
         backButton.setForeground(Color.WHITE);
+        
+        viewButton.setFont(buttonFont);
+        viewButton.setBackground(new Color(34, 139, 34));
+        viewButton.setForeground(Color.WHITE);
+        
+        refreshButton.setFont(buttonFont);
+        refreshButton.setBackground(new Color(255, 140, 0));
+        refreshButton.setForeground(Color.WHITE);
+        
+        toggleStatusButton.setFont(buttonFont);
+        toggleStatusButton.setBackground(new Color(138, 43, 226));
+        toggleStatusButton.setForeground(Color.WHITE);
     }
     
     private void setupLayout() {
@@ -93,16 +111,33 @@ public class EmployeePanel extends JPanel {
         add(scrollPane, BorderLayout.CENTER);
         
         // Control panel
-        JPanel controlPanel = new JPanel(new FlowLayout());
-        controlPanel.add(new JLabel("Search:"));
-        controlPanel.add(searchField);
-        controlPanel.add(searchButton);
-        controlPanel.add(Box.createHorizontalStrut(20));
-        controlPanel.add(addButton);
-        controlPanel.add(editButton);
-        controlPanel.add(deleteButton);
-        controlPanel.add(Box.createHorizontalStrut(20));
-        controlPanel.add(backButton);
+        JPanel controlPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        
+        // Search row
+        gbc.gridx = 0; gbc.gridy = 0;
+        controlPanel.add(new JLabel("Search:"), gbc);
+        gbc.gridx = 1;
+        controlPanel.add(searchField, gbc);
+        gbc.gridx = 2;
+        controlPanel.add(searchButton, gbc);
+        gbc.gridx = 3;
+        controlPanel.add(refreshButton, gbc);
+        
+        // Button row
+        gbc.gridx = 0; gbc.gridy = 1;
+        controlPanel.add(addButton, gbc);
+        gbc.gridx = 1;
+        controlPanel.add(editButton, gbc);
+        gbc.gridx = 2;
+        controlPanel.add(deleteButton, gbc);
+        gbc.gridx = 3;
+        controlPanel.add(viewButton, gbc);
+        gbc.gridx = 4;
+        controlPanel.add(toggleStatusButton, gbc);
+        gbc.gridx = 5;
+        controlPanel.add(backButton, gbc);
         
         add(controlPanel, BorderLayout.SOUTH);
     }
@@ -150,21 +185,44 @@ public class EmployeePanel extends JPanel {
                 searchEmployees();
             }
         });
+        
+        viewButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                viewSelectedEmployee();
+            }
+        });
+        
+        refreshButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                refreshTable();
+            }
+        });
+        
+        toggleStatusButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                toggleEmployeeStatus();
+            }
+        });
     }
     
     private void refreshTable() {
         tableModel.setRowCount(0);
-        List<Employee> employees = mainApp.getEmployeeManager().getActiveEmployees();
+        List<Employee> employees = mainApp.getEmployeeManager().getAllEmployees();
         
         for (Employee emp : employees) {
             Object[] rowData = {
                 emp.getEmployeeId(),
                 emp.getFullName(),
                 emp.getEmail(),
+                emp.getPhone() == null ? "" : emp.getPhone(),
                 emp.getDepartment(),
                 emp.getPosition(),
                 String.format("$%.2f", emp.getBaseSalary()),
-                emp.getHireDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                emp.getHireDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
+                emp.isActive() ? "Active" : "Inactive"
             };
             tableModel.addRow(rowData);
         }
@@ -258,17 +316,98 @@ public class EmployeePanel extends JPanel {
         
         tableModel.setRowCount(0);
         for (Employee emp : results) {
-            if (emp.isActive()) {
-                Object[] rowData = {
-                    emp.getEmployeeId(),
-                    emp.getFullName(),
-                    emp.getEmail(),
-                    emp.getDepartment(),
-                    emp.getPosition(),
-                    String.format("$%.2f", emp.getBaseSalary()),
-                    emp.getHireDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
-                };
-                tableModel.addRow(rowData);
+            Object[] rowData = {
+                emp.getEmployeeId(),
+                emp.getFullName(),
+                emp.getEmail(),
+                emp.getPhone() == null ? "" : emp.getPhone(),
+                emp.getDepartment(),
+                emp.getPosition(),
+                String.format("$%.2f", emp.getBaseSalary()),
+                emp.getHireDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
+                emp.isActive() ? "Active" : "Inactive"
+            };
+            tableModel.addRow(rowData);
+        }
+    }
+    
+    private void viewSelectedEmployee() {
+        int selectedRow = employeeTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Please select an employee to view.", 
+                                        "No Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        int employeeId = (Integer) tableModel.getValueAt(selectedRow, 0);
+        Employee employee = mainApp.getEmployeeManager().getEmployee(employeeId);
+        
+        if (employee != null) {
+            showEmployeeDetails(employee);
+        }
+    }
+    
+    private void showEmployeeDetails(Employee employee) {
+        StringBuilder details = new StringBuilder();
+        details.append("Employee Details\n");
+        details.append("=================\n\n");
+        details.append("ID: ").append(employee.getEmployeeId()).append("\n");
+        details.append("Name: ").append(employee.getFullName()).append("\n");
+        details.append("Email: ").append(employee.getEmail()).append("\n");
+        details.append("Phone: ").append(employee.getPhone() == null ? "N/A" : employee.getPhone()).append("\n");
+        details.append("Department: ").append(employee.getDepartment()).append("\n");
+        details.append("Position: ").append(employee.getPosition()).append("\n");
+        details.append("Base Salary: $").append(String.format("%.2f", employee.getBaseSalary())).append("\n");
+        details.append("Hire Date: ").append(employee.getHireDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))).append("\n");
+        details.append("Status: ").append(employee.isActive() ? "Active" : "Inactive").append("\n");
+        
+        JTextArea textArea = new JTextArea(details.toString());
+        textArea.setEditable(false);
+        textArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        
+        JScrollPane scrollPane = new JScrollPane(textArea);
+        scrollPane.setPreferredSize(new Dimension(400, 300));
+        
+        JOptionPane.showMessageDialog(this, scrollPane, "Employee Details", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    private void toggleEmployeeStatus() {
+        if (!mainApp.getAuthManager().hasAdminRole()) {
+            JOptionPane.showMessageDialog(this, "Access denied. Admin privileges required.", 
+                                        "Access Denied", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
+        int selectedRow = employeeTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Please select an employee to toggle status.", 
+                                        "No Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        int employeeId = (Integer) tableModel.getValueAt(selectedRow, 0);
+        String employeeName = (String) tableModel.getValueAt(selectedRow, 1);
+        String currentStatus = (String) tableModel.getValueAt(selectedRow, 8);
+        
+        String action = currentStatus.equals("Active") ? "deactivate" : "activate";
+        
+        int confirm = JOptionPane.showConfirmDialog(this, 
+                "Are you sure you want to " + action + " employee: " + employeeName + "?", 
+                "Confirm Status Change", JOptionPane.YES_NO_OPTION);
+        
+        if (confirm == JOptionPane.YES_OPTION) {
+            Employee employee = mainApp.getEmployeeManager().getEmployee(employeeId);
+            if (employee != null) {
+                employee.setActive(!employee.isActive());
+                if (mainApp.getEmployeeManager().updateEmployee(employee.getEmployeeId(), 
+                        employee.getFirstName(), employee.getLastName(), employee.getEmail(), 
+                        employee.getPhone(), employee.getDepartment(), employee.getPosition(), employee.getBaseSalary(), employee.getHireDate())) {
+                    JOptionPane.showMessageDialog(this, "Employee status updated successfully.");
+                    refreshTable();
+                } else {
+                    JOptionPane.showMessageDialog(this, "Failed to update employee status.", 
+                                                "Error", JOptionPane.ERROR_MESSAGE);
+                }
             }
         }
     }

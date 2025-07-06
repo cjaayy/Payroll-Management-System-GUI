@@ -24,7 +24,7 @@ public class Employee {
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
-        this.phone = "";
+        this.phone = null;
         this.department = department;
         this.position = position;
         this.baseSalary = baseSalary;
