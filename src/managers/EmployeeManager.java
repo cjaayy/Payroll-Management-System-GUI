@@ -125,10 +125,10 @@ public class EmployeeManager {
         }
     }
     
-    public void addEmployee(Employee employee) {
+    public boolean addEmployee(Employee employee) {
         // Set a proper ID for database storage
         employee.setEmployeeId(getNextEmployeeId());
-        databaseDAO.insertEmployee(employee);
+        return databaseDAO.insertEmployee(employee);
     }
     
     public Employee createEmployee(String firstName, String lastName, String email, 
@@ -263,9 +263,13 @@ public class EmployeeManager {
         return false;
     }
     
+    public boolean updateEmployee(Employee employee) {
+        return databaseDAO.updateEmployee(employee);
+    }
+    
     public boolean updateEmployee(int employeeId, String firstName, String lastName, String email, 
-                                String phone, String department, String position, String jobTitle, String manager,
-                                double baseSalary, LocalDate hireDate) {
+                                String phone, String department, String position, String jobTitle, 
+                                String manager, double baseSalary, LocalDate hireDate) {
         System.out.println("EmployeeManager: Updating employee ID " + employeeId + " with employment details - Job Title: " + jobTitle + ", Manager: " + manager);
         String stringId = generateEmployeeStringId(employeeId);
         Employee employee = databaseDAO.getEmployeeById(stringId);
@@ -424,14 +428,19 @@ public class EmployeeManager {
                     System.out.println("Contact information saved successfully for employee: " + employee.getFormattedEmployeeId());
                 }
                 
-                // Save documents
-                if (employee.getDocuments() != null && !employee.getDocuments().isEmpty()) {
-                    System.out.println("Attempting to save " + employee.getDocuments().size() + " documents for employee: " + employee.getFormattedEmployeeId());
+                // Save documents (handle both new and deleted documents)
+                if (employee.getDocuments() != null) {
+                    System.out.println("Managing documents for employee: " + employee.getFormattedEmployeeId());
+                    
+                    // First, get existing documents from database
+                    List<EmployeeDocument> existingDocuments = mySQLDAO.getEmployeeDocuments(employee);
+                    
+                    // Save new documents
                     int savedDocuments = 0;
                     for (EmployeeDocument document : employee.getDocuments()) {
                         if (document.getDocumentId() == 0) { // New document
                             document.setEmployeeId(employee.getEmployeeId());
-                            System.out.println("Saving document: " + document.getFileName() + " for employee ID: " + employee.getEmployeeId());
+                            System.out.println("Saving new document: " + document.getFileName() + " for employee ID: " + employee.getEmployeeId());
                             boolean documentSaved = mySQLDAO.insertEmployeeDocument(document);
                             if (documentSaved) {
                                 savedDocuments++;
@@ -441,9 +450,30 @@ public class EmployeeManager {
                             }
                         }
                     }
-                    System.out.println("Successfully saved " + savedDocuments + " out of " + employee.getDocuments().size() + " documents");
+                    
+                    // Delete documents that are no longer in the employee's document list
+                    for (EmployeeDocument existingDoc : existingDocuments) {
+                        boolean stillExists = false;
+                        for (EmployeeDocument currentDoc : employee.getDocuments()) {
+                            if (currentDoc.getDocumentId() == existingDoc.getDocumentId()) {
+                                stillExists = true;
+                                break;
+                            }
+                        }
+                        if (!stillExists) {
+                            System.out.println("Deleting document: " + existingDoc.getFileName() + " (ID: " + existingDoc.getDocumentId() + ")");
+                            boolean deleted = mySQLDAO.deleteEmployeeDocument(existingDoc.getDocumentId());
+                            if (deleted) {
+                                System.out.println("Document deleted successfully: " + existingDoc.getFileName());
+                            } else {
+                                System.err.println("Failed to delete document: " + existingDoc.getFileName());
+                            }
+                        }
+                    }
+                    
+                    System.out.println("Document management completed for employee: " + employee.getFormattedEmployeeId() + " (saved " + savedDocuments + " new documents)");
                 } else {
-                    System.out.println("No documents to save for employee: " + employee.getFormattedEmployeeId());
+                    System.out.println("No documents to manage for employee: " + employee.getFormattedEmployeeId());
                 }
             } catch (Exception e) {
                 System.err.println("Error saving contact info/documents: " + e.getMessage());

@@ -6,9 +6,27 @@ import java.util.List;
 import java.util.ArrayList;
 
 /**
- * Employee class representing an employee in the payroll system
- */
-public class Employee {
+     private void initializePersonalInfo() {
+        this.personalEmail = "";
+        this.workPhone = "";
+        this.emergencyContact = "";
+        this.emergencyPhone = "";
+        this.streetAddress = "";
+        this.barangay = "";
+        this.city = "";
+        this.provinceState = "";
+        this.country = "";
+        this.zipCode = "";
+        this.birthDate = null;
+        this.socialSecurityNumber = "";
+        this.nationality = "";
+        this.maritalStatus = "";
+    }
+    
+    /**
+     * Employee class representing an employee in the payroll system
+     */
+    public class Employee {
     private int employeeId;
     private String comprehensiveEmployeeId; // New field for comprehensive ID (e.g., IT-202501-001)
     private String firstName;
@@ -39,6 +57,22 @@ public class Employee {
     private String nationality;
     private String maritalStatus;
     
+    // Employment Status and Key Dates
+    private String employmentStatus;  // ACTIVE, INACTIVE, RESIGNED, TERMINATED
+    private LocalDate joiningDate;    // Same as hire date but more explicit
+    private LocalDate probationEndDate;
+    private LocalDate exitDate;
+    private String exitReason;
+    
+    // Bank and Payment Details
+    private String bankName;
+    private String accountNumber;
+    private String accountHolderName;
+    private String bankBranch;
+    private String routingNumber;
+    private String paymentMethod;     // BANK_TRANSFER, CASH, CHECK
+    private String paymentFrequency;  // WEEKLY, BIWEEKLY, MONTHLY
+    
     // Document Storage
     private List<EmployeeDocument> documents;
     
@@ -59,6 +93,7 @@ public class Employee {
         this.comprehensiveEmployeeId = null; // Will be set by EmployeeManager
         this.documents = new ArrayList<>();
         initializePersonalInfo();
+        initializeEmploymentInfo();
     }
     
     // Constructor for database operations
@@ -94,6 +129,7 @@ public class Employee {
         this.comprehensiveEmployeeId = null; // Will be generated if needed
         this.documents = new ArrayList<>();
         initializePersonalInfo();
+        initializeEmploymentInfo();
     }
     
     // Constructor for database operations with employment details
@@ -130,6 +166,7 @@ public class Employee {
         this.comprehensiveEmployeeId = null; // Will be generated if needed
         this.documents = new ArrayList<>();
         initializePersonalInfo();
+        initializeEmploymentInfo();
     }
     
     private void initializePersonalInfo() {
@@ -147,6 +184,21 @@ public class Employee {
         this.socialSecurityNumber = "";
         this.nationality = "";
         this.maritalStatus = "";
+    }
+    
+    private void initializeEmploymentInfo() {
+        this.employmentStatus = "ACTIVE";
+        this.joiningDate = this.hireDate; // Default joining date to hire date
+        this.probationEndDate = null;
+        this.exitDate = null;
+        this.exitReason = "";
+        this.bankName = "";
+        this.accountNumber = "";
+        this.accountHolderName = "";
+        this.bankBranch = "";
+        this.routingNumber = "";
+        this.paymentMethod = "BANK_TRANSFER";
+        this.paymentFrequency = "MONTHLY";
     }
     
     // Getters and setters
@@ -175,6 +227,7 @@ public class Employee {
     public double getBaseSalary() { return baseSalary; }
     public void setBaseSalary(double baseSalary) { this.baseSalary = baseSalary; }
     public double getSalary() { return baseSalary; } // Alias for database compatibility
+    public void setSalary(double salary) { this.baseSalary = salary; } // Alias for database compatibility
     public LocalDate getHireDate() { return hireDate; }
     public void setHireDate(LocalDate hireDate) { this.hireDate = hireDate; }
     public boolean isActive() { return isActive; }
@@ -218,9 +271,46 @@ public class Employee {
     
     public String getNationality() { return nationality; }
     public void setNationality(String nationality) { this.nationality = nationality; }
-    
     public String getMaritalStatus() { return maritalStatus; }
     public void setMaritalStatus(String maritalStatus) { this.maritalStatus = maritalStatus; }
+    
+    // Employment Status and Key Dates Getters and Setters
+    public String getEmploymentStatus() { return employmentStatus; }
+    public void setEmploymentStatus(String employmentStatus) { this.employmentStatus = employmentStatus; }
+    
+    public LocalDate getJoiningDate() { return joiningDate; }
+    public void setJoiningDate(LocalDate joiningDate) { this.joiningDate = joiningDate; }
+    
+    public LocalDate getProbationEndDate() { return probationEndDate; }
+    public void setProbationEndDate(LocalDate probationEndDate) { this.probationEndDate = probationEndDate; }
+    
+    public LocalDate getExitDate() { return exitDate; }
+    public void setExitDate(LocalDate exitDate) { this.exitDate = exitDate; }
+    
+    public String getExitReason() { return exitReason; }
+    public void setExitReason(String exitReason) { this.exitReason = exitReason; }
+    
+    // Bank and Payment Details Getters and Setters
+    public String getBankName() { return bankName; }
+    public void setBankName(String bankName) { this.bankName = bankName; }
+    
+    public String getAccountNumber() { return accountNumber; }
+    public void setAccountNumber(String accountNumber) { this.accountNumber = accountNumber; }
+    
+    public String getAccountHolderName() { return accountHolderName; }
+    public void setAccountHolderName(String accountHolderName) { this.accountHolderName = accountHolderName; }
+    
+    public String getBankBranch() { return bankBranch; }
+    public void setBankBranch(String bankBranch) { this.bankBranch = bankBranch; }
+    
+    public String getRoutingNumber() { return routingNumber; }
+    public void setRoutingNumber(String routingNumber) { this.routingNumber = routingNumber; }
+    
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+    
+    public String getPaymentFrequency() { return paymentFrequency; }
+    public void setPaymentFrequency(String paymentFrequency) { this.paymentFrequency = paymentFrequency; }
     
     // Document Management
     public List<EmployeeDocument> getDocuments() { return documents; }

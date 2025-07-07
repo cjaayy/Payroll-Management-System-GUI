@@ -86,6 +86,65 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
                         // Column might not exist in older database versions
                         System.out.println("Note: comprehensive_employee_id column not found. Using legacy ID format.");
                     }
+                    
+                    // Set employment status and dates
+                    try {
+                        String employmentStatus = rs.getString("employment_status");
+                        if (employmentStatus != null) {
+                            employee.setEmploymentStatus(employmentStatus);
+                        }
+                        
+                        Date joiningDate = rs.getDate("joining_date");
+                        if (joiningDate != null) {
+                            employee.setJoiningDate(joiningDate.toLocalDate());
+                        }
+                        
+                        Date probationEndDate = rs.getDate("probation_end_date");
+                        if (probationEndDate != null) {
+                            employee.setProbationEndDate(probationEndDate.toLocalDate());
+                        }
+                        
+                        Date exitDate = rs.getDate("exit_date");
+                        if (exitDate != null) {
+                            employee.setExitDate(exitDate.toLocalDate());
+                        }
+                        
+                        String exitReason = rs.getString("exit_reason");
+                        if (exitReason != null) {
+                            employee.setExitReason(exitReason);
+                        }
+                        
+                        // Set bank and payment details
+                        String bankName = rs.getString("bank_name");
+                        if (bankName != null) employee.setBankName(bankName);
+                        
+                        String accountNumber = rs.getString("account_number");
+                        if (accountNumber != null) employee.setAccountNumber(accountNumber);
+                        
+                        String accountHolderName = rs.getString("account_holder_name");
+                        if (accountHolderName != null) employee.setAccountHolderName(accountHolderName);
+                        
+                        String bankBranch = rs.getString("bank_branch");
+                        if (bankBranch != null) employee.setBankBranch(bankBranch);
+                        
+                        String routingNumber = rs.getString("routing_number");
+                        if (routingNumber != null) employee.setRoutingNumber(routingNumber);
+                        
+                        String paymentMethod = rs.getString("payment_method");
+                        if (paymentMethod != null) {
+                            employee.setPaymentMethod(paymentMethod);
+                        }
+                        
+                        String paymentFrequency = rs.getString("payment_frequency");
+                        if (paymentFrequency != null) {
+                            employee.setPaymentFrequency(paymentFrequency);
+                        }
+                        
+                    } catch (SQLException e) {
+                        // New columns might not exist in older database versions
+                        System.out.println("Note: Some employment or payment columns not found. Using default values.");
+                    }
+                    
                     employees.add(employee);
                 } catch (Exception e) {
                     System.err.println("Error creating employee from DB record: " + e.getMessage());
@@ -176,6 +235,65 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
                     // Column might not exist in older database versions
                     System.out.println("Note: comprehensive_employee_id column not found for employee lookup. Using legacy ID format.");
                 }
+                
+                // Set employment status and dates
+                try {
+                    String employmentStatus = rs.getString("employment_status");
+                    if (employmentStatus != null) {
+                        employee.setEmploymentStatus(employmentStatus);
+                    }
+                    
+                    Date joiningDate = rs.getDate("joining_date");
+                    if (joiningDate != null) {
+                        employee.setJoiningDate(joiningDate.toLocalDate());
+                    }
+                    
+                    Date probationEndDate = rs.getDate("probation_end_date");
+                    if (probationEndDate != null) {
+                        employee.setProbationEndDate(probationEndDate.toLocalDate());
+                    }
+                    
+                    Date exitDate = rs.getDate("exit_date");
+                    if (exitDate != null) {
+                        employee.setExitDate(exitDate.toLocalDate());
+                    }
+                    
+                    String exitReason = rs.getString("exit_reason");
+                    if (exitReason != null) {
+                        employee.setExitReason(exitReason);
+                    }
+                    
+                    // Set bank and payment details
+                    String bankName = rs.getString("bank_name");
+                    if (bankName != null) employee.setBankName(bankName);
+                    
+                    String accountNumber = rs.getString("account_number");
+                    if (accountNumber != null) employee.setAccountNumber(accountNumber);
+                    
+                    String accountHolderName = rs.getString("account_holder_name");
+                    if (accountHolderName != null) employee.setAccountHolderName(accountHolderName);
+                    
+                    String bankBranch = rs.getString("bank_branch");
+                    if (bankBranch != null) employee.setBankBranch(bankBranch);
+                    
+                    String routingNumber = rs.getString("routing_number");
+                    if (routingNumber != null) employee.setRoutingNumber(routingNumber);
+                    
+                    String paymentMethod = rs.getString("payment_method");
+                    if (paymentMethod != null) {
+                        employee.setPaymentMethod(paymentMethod);
+                    }
+                    
+                    String paymentFrequency = rs.getString("payment_frequency");
+                    if (paymentFrequency != null) {
+                        employee.setPaymentFrequency(paymentFrequency);
+                    }
+                    
+                } catch (SQLException e) {
+                    // New columns might not exist in older database versions
+                    System.out.println("Note: Some employment or payment columns not found in getEmployeeById. Using default values.");
+                }
+                
                 return employee;
             }
         } catch (SQLException e) {
@@ -222,6 +340,22 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
                     stmt.setString(10, employee.getManager());
                     stmt.setDate(11, java.sql.Date.valueOf(employee.getHireDate()));
                     stmt.setDouble(12, employee.getSalary());
+                    
+                    // Set new employment status and dates
+                    stmt.setString(13, employee.getEmploymentStatus());
+                    stmt.setDate(14, employee.getJoiningDate() != null ? java.sql.Date.valueOf(employee.getJoiningDate()) : null);
+                    stmt.setDate(15, employee.getProbationEndDate() != null ? java.sql.Date.valueOf(employee.getProbationEndDate()) : null);
+                    stmt.setDate(16, employee.getExitDate() != null ? java.sql.Date.valueOf(employee.getExitDate()) : null);
+                    stmt.setString(17, employee.getExitReason());
+                    
+                    // Set bank and payment details
+                    stmt.setString(18, employee.getBankName());
+                    stmt.setString(19, employee.getAccountNumber());
+                    stmt.setString(20, employee.getAccountHolderName());
+                    stmt.setString(21, employee.getBankBranch());
+                    stmt.setString(22, employee.getRoutingNumber());
+                    stmt.setString(23, employee.getPaymentMethod());
+                    stmt.setString(24, employee.getPaymentFrequency());
                 } else {
                     stmt.setString(2, employee.getFirstName());
                     stmt.setString(3, employee.getLastName());
@@ -287,8 +421,25 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
                 stmt.setString(9, employee.getManager());
                 stmt.setDate(10, java.sql.Date.valueOf(employee.getHireDate()));
                 stmt.setDouble(11, employee.getSalary());
+                
+                // Set new employment status and dates
+                stmt.setString(12, employee.getEmploymentStatus());
+                stmt.setDate(13, employee.getJoiningDate() != null ? java.sql.Date.valueOf(employee.getJoiningDate()) : null);
+                stmt.setDate(14, employee.getProbationEndDate() != null ? java.sql.Date.valueOf(employee.getProbationEndDate()) : null);
+                stmt.setDate(15, employee.getExitDate() != null ? java.sql.Date.valueOf(employee.getExitDate()) : null);
+                stmt.setString(16, employee.getExitReason());
+                
+                // Set bank and payment details
+                stmt.setString(17, employee.getBankName());
+                stmt.setString(18, employee.getAccountNumber());
+                stmt.setString(19, employee.getAccountHolderName());
+                stmt.setString(20, employee.getBankBranch());
+                stmt.setString(21, employee.getRoutingNumber());
+                stmt.setString(22, employee.getPaymentMethod());
+                stmt.setString(23, employee.getPaymentFrequency());
+                
                 String empIdString = String.format("EMP%03d", employee.getEmployeeId());
-                stmt.setString(12, empIdString);
+                stmt.setString(24, empIdString);
             } else {
                 stmt.setString(1, employee.getFirstName());
                 stmt.setString(2, employee.getLastName());

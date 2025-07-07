@@ -40,6 +40,23 @@ CREATE TABLE IF NOT EXISTS employees (
     hire_date DATE,
     salary DECIMAL(10, 2),
     status VARCHAR(20) DEFAULT 'ACTIVE',
+    
+    -- Employment Status and Key Dates
+    employment_status VARCHAR(20) DEFAULT 'ACTIVE',
+    joining_date DATE,
+    probation_end_date DATE,
+    exit_date DATE,
+    exit_reason TEXT,
+    
+    -- Bank and Payment Details
+    bank_name VARCHAR(100),
+    account_number VARCHAR(50),
+    account_holder_name VARCHAR(100),
+    bank_branch VARCHAR(100),
+    routing_number VARCHAR(50),
+    payment_method VARCHAR(20) DEFAULT 'BANK_TRANSFER',
+    payment_frequency VARCHAR(20) DEFAULT 'MONTHLY',
+    
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
