@@ -88,15 +88,84 @@ public class DatabaseConnection {
     private static void createTables() throws SQLException {
         try (Statement stmt = connection.createStatement()) {
             
-            // Create users table
+            // Check if enhanced users table already exists
+            boolean usersTableExists = false;
+            boolean hasNewSchema = false;
+            
+            try {
+                ResultSet tables = stmt.executeQuery("SHOW TABLES LIKE 'users'");
+                if (tables.next()) {
+                    usersTableExists = true;
+                    tables.close();
+                    
+                    // Check if it has the new schema
+                    ResultSet columns = stmt.executeQuery("SHOW COLUMNS FROM users LIKE 'user_id'");
+                    if (columns.next()) {
+                        hasNewSchema = true;
+                    }
+                    columns.close();
+                }
+            } catch (SQLException e) {
+                // Table doesn't exist, we'll create it
+                usersTableExists = false;
+            }
+            
+            if (usersTableExists && !hasNewSchema) {
+                // Old schema exists, need to backup and migrate
+                System.out.println("Migrating users table to new schema...");
+                try {
+                    stmt.executeUpdate("CREATE TABLE users_backup AS SELECT * FROM users");
+                    stmt.executeUpdate("DROP TABLE users");
+                } catch (SQLException e) {
+                    System.err.println("Migration warning: " + e.getMessage());
+                }
+            }
+            
+            // Create users table with enhanced security features (only if needed)
             String createUsersTable = "CREATE TABLE IF NOT EXISTS users (" +
-                "id INT AUTO_INCREMENT PRIMARY KEY, " +
+                "user_id INT AUTO_INCREMENT PRIMARY KEY, " +
                 "username VARCHAR(50) UNIQUE NOT NULL, " +
-                "password VARCHAR(255) NOT NULL, " +
-                "role VARCHAR(20) NOT NULL DEFAULT 'USER', " +
-                "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                "password_hash VARCHAR(255) NOT NULL, " +
+                "salt VARCHAR(255) NOT NULL, " +
+                "email VARCHAR(100) UNIQUE, " +
+                "full_name VARCHAR(100), " +
+                "role ENUM('ADMIN', 'HR_OFFICER', 'PAYROLL_OFFICER', 'EMPLOYEE') NOT NULL DEFAULT 'EMPLOYEE', " +
+                "is_active BOOLEAN DEFAULT TRUE, " +
+                "failed_login_attempts INT DEFAULT 0, " +
+                "lockout_until TIMESTAMP NULL, " +
+                "last_login TIMESTAMP NULL, " +
+                "last_password_change TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                "created_by VARCHAR(50), " +
+                "last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, " +
+                "last_modified_by VARCHAR(50), " +
+                "INDEX idx_username (username), " +
+                "INDEX idx_email (email), " +
+                "INDEX idx_role (role), " +
+                "INDEX idx_active (is_active)" +
                 ")";
             stmt.executeUpdate(createUsersTable);
+            
+            // Create audit trail table
+            String createAuditTable = "CREATE TABLE IF NOT EXISTS audit_trail (" +
+                "audit_id INT AUTO_INCREMENT PRIMARY KEY, " +
+                "username VARCHAR(50) NOT NULL, " +
+                "action VARCHAR(50) NOT NULL, " +
+                "table_name VARCHAR(50), " +
+                "record_id VARCHAR(50), " +
+                "old_values TEXT, " +
+                "new_values TEXT, " +
+                "ip_address VARCHAR(45), " +
+                "user_agent TEXT, " +
+                "timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                "is_success BOOLEAN DEFAULT TRUE, " +
+                "error_message TEXT, " +
+                "INDEX idx_username (username), " +
+                "INDEX idx_action (action), " +
+                "INDEX idx_timestamp (timestamp), " +
+                "INDEX idx_table_record (table_name, record_id)" +
+                ")";
+            stmt.executeUpdate(createAuditTable);
             
             // Create employees table
             String createEmployeesTable = "CREATE TABLE IF NOT EXISTS employees (" +
@@ -227,10 +296,53 @@ public class DatabaseConnection {
                 ")";
             stmt.executeUpdate(createDocumentsTable);
             
-            // Insert default admin user if it doesn't exist
-            String insertAdminUser = "INSERT IGNORE INTO users (username, password, role) " +
-                "VALUES ('admin', 'admin', 'ADMIN')";
-            stmt.executeUpdate(insertAdminUser);
+            // Drop and recreate salary components table to ensure correct schema
+            try {
+                stmt.executeUpdate("DROP TABLE IF EXISTS employee_salary_components");
+                stmt.executeUpdate("DROP TABLE IF EXISTS salary_components");
+                System.out.println("Dropped existing salary components tables for recreation...");
+            } catch (SQLException e) {
+                System.out.println("Tables didn't exist or couldn't be dropped: " + e.getMessage());
+            }
+            
+            // Create salary components table
+            String createSalaryComponentsTable = "CREATE TABLE IF NOT EXISTS salary_components (" +
+                "id INT AUTO_INCREMENT PRIMARY KEY, " +
+                "name VARCHAR(100) NOT NULL, " +
+                "description TEXT, " +
+                "type VARCHAR(20) NOT NULL, " +
+                "amount DECIMAL(10,2) NOT NULL DEFAULT 0, " +
+                "is_percentage BOOLEAN DEFAULT FALSE, " +
+                "is_active BOOLEAN DEFAULT TRUE, " +
+                "created_date DATE DEFAULT (CURRENT_DATE), " +
+                "last_modified DATE DEFAULT (CURRENT_DATE), " +
+                "created_by VARCHAR(50), " +
+                "modified_by VARCHAR(50), " +
+                "UNIQUE KEY unique_component_name (name, type)" +
+                ")";
+            stmt.executeUpdate(createSalaryComponentsTable);
+            
+            // Create employee salary components table
+            String createEmployeeSalaryComponentsTable = "CREATE TABLE IF NOT EXISTS employee_salary_components (" +
+                "id INT AUTO_INCREMENT PRIMARY KEY, " +
+                "employee_id VARCHAR(20) NOT NULL, " +
+                "salary_component_id INT NOT NULL, " +
+                "custom_amount DECIMAL(10,2) NOT NULL, " +
+                "is_percentage BOOLEAN DEFAULT FALSE, " +
+                "is_active BOOLEAN DEFAULT TRUE, " +
+                "effective_date DATE NOT NULL, " +
+                "end_date DATE NULL, " +
+                "created_date DATE DEFAULT (CURRENT_DATE), " +
+                "created_by VARCHAR(50), " +
+                "remarks TEXT, " +
+                "FOREIGN KEY (employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE, " +
+                "FOREIGN KEY (salary_component_id) REFERENCES salary_components(id) ON DELETE CASCADE, " +
+                "UNIQUE KEY unique_employee_component (employee_id, salary_component_id, effective_date)" +
+                ")";
+            stmt.executeUpdate(createEmployeeSalaryComponentsTable);
+            
+            // Note: Default users are now created by UserManager.initializeDefaultAdmin()
+            // This ensures proper password hashing and security
             
             System.out.println("Database tables created successfully!");
         }

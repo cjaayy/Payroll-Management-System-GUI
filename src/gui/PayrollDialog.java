@@ -16,9 +16,10 @@ import java.time.format.DateTimeParseException;
  * Dialog for creating/editing payroll records
  */
 public class PayrollDialog extends JDialog {
-    private PayrollManager payrollManager;
-    private EmployeeManager employeeManager;
-    private Payroll payroll;
+    private static final long serialVersionUID = 1L;
+    private transient PayrollManager payrollManager;
+    private transient EmployeeManager employeeManager;
+    private transient Payroll payroll;
     private boolean confirmed = false;
     
     private JTextField employeeIdField;
@@ -31,6 +32,7 @@ public class PayrollDialog extends JDialog {
     
     private JButton saveButton;
     private JButton cancelButton;
+    private JButton salaryBreakdownButton;
     private JLabel employeeNameLabel;
     
     public PayrollDialog(Window parent, PayrollManager payrollManager, 
@@ -64,6 +66,7 @@ public class PayrollDialog extends JDialog {
         
         saveButton = new JButton("Save");
         cancelButton = new JButton("Cancel");
+        salaryBreakdownButton = new JButton("Salary Breakdown");
         employeeNameLabel = new JLabel();
         
         // Style buttons
@@ -71,6 +74,8 @@ public class PayrollDialog extends JDialog {
         saveButton.setForeground(Color.WHITE);
         cancelButton.setBackground(new Color(128, 128, 128));
         cancelButton.setForeground(Color.WHITE);
+        salaryBreakdownButton.setBackground(new Color(32, 178, 170));
+        salaryBreakdownButton.setForeground(Color.WHITE);
         
         // Set default values
         overtimeField.setText("0.00");
@@ -138,6 +143,7 @@ public class PayrollDialog extends JDialog {
         
         // Button panel
         JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.add(salaryBreakdownButton);
         buttonPanel.add(saveButton);
         buttonPanel.add(cancelButton);
         add(buttonPanel, BorderLayout.SOUTH);
@@ -162,6 +168,13 @@ public class PayrollDialog extends JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
                 dispose();
+            }
+        });
+        
+        salaryBreakdownButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                showSalaryBreakdown();
             }
         });
     }
@@ -320,5 +333,98 @@ public class PayrollDialog extends JDialog {
     
     public boolean isConfirmed() {
         return confirmed;
+    }
+    
+    private void showSalaryBreakdown() {
+        try {
+            String employeeIdText = employeeIdField.getText().trim();
+            if (employeeIdText.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Please enter an employee ID first.", 
+                                            "No Employee Selected", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            
+            // Find the employee
+            Employee employee = null;
+            if (employeeIdText.toUpperCase().startsWith("EMP") || employeeIdText.matches("^[A-Z]{2,3}-\\d{6}-\\d{3}$")) {
+                employee = employeeManager.getEmployeeByFormattedId(employeeIdText);
+            } else {
+                try {
+                    int empId = Integer.parseInt(employeeIdText);
+                    employee = employeeManager.getEmployee(empId);
+                } catch (NumberFormatException e) {
+                    // Invalid ID format
+                }
+            }
+            
+            if (employee == null) {
+                JOptionPane.showMessageDialog(this, "Employee not found.", 
+                                            "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            // Get salary breakdown from PayrollManager's SalaryComponentManager
+            if (payrollManager.getSalaryComponentManager() != null) {
+                java.util.Map<String, Double> breakdown = payrollManager.getSalaryComponentManager()
+                    .getSalaryBreakdown(employee.getEmployeeId(), employee.getBaseSalary());
+                
+                // Create detailed breakdown text
+                StringBuilder sb = new StringBuilder();
+                sb.append("Salary Breakdown for ").append(employee.getFullName()).append("\n\n");
+                sb.append(String.format("Base Salary: $%.2f\n", employee.getBaseSalary()));
+                
+                double totalAllowances = 0;
+                double totalDeductions = 0;
+                double totalBonuses = 0;
+                
+                for (java.util.Map.Entry<String, Double> entry : breakdown.entrySet()) {
+                    String key = entry.getKey();
+                    Double value = entry.getValue();
+                    
+                    if (key.equals("baseSalary") || key.equals("totalAllowances") || 
+                        key.equals("totalDeductions") || key.equals("totalBonuses")) {
+                        continue; // Skip summary entries
+                    }
+                    
+                    sb.append(String.format("%s: $%.2f\n", key, value));
+                    
+                    // Categorize the amount (this is a simplified approach)
+                    if (key.toLowerCase().contains("allowance") || key.toLowerCase().contains("hra") || 
+                        key.toLowerCase().contains("transport") || key.toLowerCase().contains("medical")) {
+                        totalAllowances += value;
+                    } else if (key.toLowerCase().contains("deduction") || key.toLowerCase().contains("tax") || 
+                               key.toLowerCase().contains("pf") || key.toLowerCase().contains("esi")) {
+                        totalDeductions += value;
+                    } else if (key.toLowerCase().contains("bonus") || key.toLowerCase().contains("overtime")) {
+                        totalBonuses += value;
+                    }
+                }
+                
+                sb.append("\n--- Summary ---\n");
+                sb.append(String.format("Total Allowances: $%.2f\n", totalAllowances));
+                sb.append(String.format("Total Bonuses: $%.2f\n", totalBonuses));
+                sb.append(String.format("Gross Salary: $%.2f\n", employee.getBaseSalary() + totalAllowances + totalBonuses));
+                sb.append(String.format("Total Deductions: $%.2f\n", totalDeductions));
+                sb.append(String.format("Net Salary: $%.2f\n", employee.getBaseSalary() + totalAllowances + totalBonuses - totalDeductions));
+                
+                // Show in a dialog
+                JTextArea textArea = new JTextArea(sb.toString());
+                textArea.setEditable(false);
+                textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
+                
+                JScrollPane scrollPane = new JScrollPane(textArea);
+                scrollPane.setPreferredSize(new Dimension(400, 300));
+                
+                JOptionPane.showMessageDialog(this, scrollPane, "Salary Breakdown - " + employee.getFullName(), 
+                                            JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Salary component system not available.", 
+                                            "Feature Not Available", JOptionPane.WARNING_MESSAGE);
+            }
+            
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error showing salary breakdown: " + ex.getMessage(), 
+                                        "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 }

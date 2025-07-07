@@ -14,6 +14,7 @@ import java.util.Map;
  * Reports Panel for generating various reports
  */
 public class ReportsPanel extends JPanel {
+    private static final long serialVersionUID = 1L;
     private PayrollManagementSystemGUI mainApp;
     private JTextArea reportArea;
     private JButton employeeSummaryButton;

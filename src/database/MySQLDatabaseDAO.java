@@ -4,9 +4,12 @@ import models.Employee;
 import models.EmployeeDocument;
 import models.Payroll;
 import models.User;
+import models.SalaryComponent;
+import models.EmployeeSalaryComponent;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.math.BigDecimal;
 
 /**
  * MySQL Database Access Object implementation
@@ -16,12 +19,12 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
     @Override
     public User authenticateUser(String username, String password) {
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(DatabaseConfig.QUERY_LOGIN)) {
+             PreparedStatement stmt = conn.prepareStatement(DatabaseConfig.QUERY_LOGIN);
+             ResultSet rs = stmt.executeQuery()) {
             
             stmt.setString(1, username);
             stmt.setString(2, password);
             
-            ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
                 return new User(
                     rs.getString("username"),
@@ -43,7 +46,7 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
             
             stmt.setString(1, user.getUsername());
             stmt.setString(2, user.getPassword());
-            stmt.setString(3, user.getRole());
+            stmt.setString(3, user.getRoleString());
             
             int rowsAffected = stmt.executeUpdate();
             return rowsAffected > 0;
@@ -209,92 +212,92 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
              PreparedStatement stmt = conn.prepareStatement(DatabaseConfig.QUERY_SELECT_EMPLOYEE_BY_ID)) {
             
             stmt.setString(1, employeeId);
-            ResultSet rs = stmt.executeQuery();
-            
-            if (rs.next()) {
-                Employee employee = new Employee(
-                    rs.getString("employee_id"),
-                    rs.getString("first_name"),
-                    rs.getString("last_name"),
-                    rs.getString("email"),
-                    rs.getString("phone"),
-                    rs.getString("department"),
-                    rs.getString("position"),
-                    rs.getString("job_title"),
-                    rs.getString("manager"),
-                    rs.getDate("hire_date"),
-                    rs.getDouble("salary")
-                );
-                // Set comprehensive employee ID if available
-                try {
-                    String comprehensiveId = rs.getString("comprehensive_employee_id");
-                    if (comprehensiveId != null && !comprehensiveId.trim().isEmpty()) {
-                        employee.setComprehensiveEmployeeId(comprehensiveId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    Employee employee = new Employee(
+                        rs.getString("employee_id"),
+                        rs.getString("first_name"),
+                        rs.getString("last_name"),
+                        rs.getString("email"),
+                        rs.getString("phone"),
+                        rs.getString("department"),
+                        rs.getString("position"),
+                        rs.getString("job_title"),
+                        rs.getString("manager"),
+                        rs.getDate("hire_date"),
+                        rs.getDouble("salary")
+                    );
+                    // Set comprehensive employee ID if available
+                    try {
+                        String comprehensiveId = rs.getString("comprehensive_employee_id");
+                        if (comprehensiveId != null && !comprehensiveId.trim().isEmpty()) {
+                            employee.setComprehensiveEmployeeId(comprehensiveId);
+                        }
+                    } catch (SQLException e) {
+                        // Column might not exist in older database versions
+                        System.out.println("Note: comprehensive_employee_id column not found for employee lookup. Using legacy ID format.");
                     }
-                } catch (SQLException e) {
-                    // Column might not exist in older database versions
-                    System.out.println("Note: comprehensive_employee_id column not found for employee lookup. Using legacy ID format.");
+                    
+                    // Set employment status and dates
+                    try {
+                        String employmentStatus = rs.getString("employment_status");
+                        if (employmentStatus != null) {
+                            employee.setEmploymentStatus(employmentStatus);
+                        }
+                        
+                        Date joiningDate = rs.getDate("joining_date");
+                        if (joiningDate != null) {
+                            employee.setJoiningDate(joiningDate.toLocalDate());
+                        }
+                        
+                        Date probationEndDate = rs.getDate("probation_end_date");
+                        if (probationEndDate != null) {
+                            employee.setProbationEndDate(probationEndDate.toLocalDate());
+                        }
+                        
+                        Date exitDate = rs.getDate("exit_date");
+                        if (exitDate != null) {
+                            employee.setExitDate(exitDate.toLocalDate());
+                        }
+                        
+                        String exitReason = rs.getString("exit_reason");
+                        if (exitReason != null) {
+                            employee.setExitReason(exitReason);
+                        }
+                        
+                        // Set bank and payment details
+                        String bankName = rs.getString("bank_name");
+                        if (bankName != null) employee.setBankName(bankName);
+                        
+                        String accountNumber = rs.getString("account_number");
+                        if (accountNumber != null) employee.setAccountNumber(accountNumber);
+                        
+                        String accountHolderName = rs.getString("account_holder_name");
+                        if (accountHolderName != null) employee.setAccountHolderName(accountHolderName);
+                        
+                        String bankBranch = rs.getString("bank_branch");
+                        if (bankBranch != null) employee.setBankBranch(bankBranch);
+                        
+                        String routingNumber = rs.getString("routing_number");
+                        if (routingNumber != null) employee.setRoutingNumber(routingNumber);
+                        
+                        String paymentMethod = rs.getString("payment_method");
+                        if (paymentMethod != null) {
+                            employee.setPaymentMethod(paymentMethod);
+                        }
+                        
+                        String paymentFrequency = rs.getString("payment_frequency");
+                        if (paymentFrequency != null) {
+                            employee.setPaymentFrequency(paymentFrequency);
+                        }
+                        
+                    } catch (SQLException e) {
+                        // New columns might not exist in older database versions
+                        System.out.println("Note: Some employment or payment columns not found in getEmployeeById. Using default values.");
+                    }
+                    
+                    return employee;
                 }
-                
-                // Set employment status and dates
-                try {
-                    String employmentStatus = rs.getString("employment_status");
-                    if (employmentStatus != null) {
-                        employee.setEmploymentStatus(employmentStatus);
-                    }
-                    
-                    Date joiningDate = rs.getDate("joining_date");
-                    if (joiningDate != null) {
-                        employee.setJoiningDate(joiningDate.toLocalDate());
-                    }
-                    
-                    Date probationEndDate = rs.getDate("probation_end_date");
-                    if (probationEndDate != null) {
-                        employee.setProbationEndDate(probationEndDate.toLocalDate());
-                    }
-                    
-                    Date exitDate = rs.getDate("exit_date");
-                    if (exitDate != null) {
-                        employee.setExitDate(exitDate.toLocalDate());
-                    }
-                    
-                    String exitReason = rs.getString("exit_reason");
-                    if (exitReason != null) {
-                        employee.setExitReason(exitReason);
-                    }
-                    
-                    // Set bank and payment details
-                    String bankName = rs.getString("bank_name");
-                    if (bankName != null) employee.setBankName(bankName);
-                    
-                    String accountNumber = rs.getString("account_number");
-                    if (accountNumber != null) employee.setAccountNumber(accountNumber);
-                    
-                    String accountHolderName = rs.getString("account_holder_name");
-                    if (accountHolderName != null) employee.setAccountHolderName(accountHolderName);
-                    
-                    String bankBranch = rs.getString("bank_branch");
-                    if (bankBranch != null) employee.setBankBranch(bankBranch);
-                    
-                    String routingNumber = rs.getString("routing_number");
-                    if (routingNumber != null) employee.setRoutingNumber(routingNumber);
-                    
-                    String paymentMethod = rs.getString("payment_method");
-                    if (paymentMethod != null) {
-                        employee.setPaymentMethod(paymentMethod);
-                    }
-                    
-                    String paymentFrequency = rs.getString("payment_frequency");
-                    if (paymentFrequency != null) {
-                        employee.setPaymentFrequency(paymentFrequency);
-                    }
-                    
-                } catch (SQLException e) {
-                    // New columns might not exist in older database versions
-                    System.out.println("Note: Some employment or payment columns not found in getEmployeeById. Using default values.");
-                }
-                
-                return employee;
             }
         } catch (SQLException e) {
             System.err.println("Error fetching employee: " + e.getMessage());
@@ -541,22 +544,22 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
              PreparedStatement stmt = conn.prepareStatement(DatabaseConfig.QUERY_SELECT_PAYROLL_BY_EMPLOYEE)) {
             
             stmt.setString(1, employeeId);
-            ResultSet rs = stmt.executeQuery();
-            
-            while (rs.next()) {
-                Payroll payroll = new Payroll(
-                    rs.getString("employee_id"),
-                    rs.getDate("pay_period_start"),
-                    rs.getDate("pay_period_end"),
-                    rs.getDouble("basic_salary"),
-                    rs.getDouble("overtime_hours"),
-                    rs.getDouble("overtime_rate"),
-                    rs.getDouble("bonus"),
-                    rs.getDouble("deductions")
-                );
-                payroll.setId(rs.getInt("id"));
-                payroll.setStatus(rs.getString("status"));
-                payrolls.add(payroll);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Payroll payroll = new Payroll(
+                        rs.getString("employee_id"),
+                        rs.getDate("pay_period_start"),
+                        rs.getDate("pay_period_end"),
+                        rs.getDouble("basic_salary"),
+                        rs.getDouble("overtime_hours"),
+                        rs.getDouble("overtime_rate"),
+                        rs.getDouble("bonus"),
+                        rs.getDouble("deductions")
+                    );
+                    payroll.setId(rs.getInt("id"));
+                    payroll.setStatus(rs.getString("status"));
+                    payrolls.add(payroll);
+                }
             }
         } catch (SQLException e) {
             System.err.println("Error fetching payroll records for employee: " + e.getMessage());
@@ -653,10 +656,10 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
                  "WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'employees' AND COLUMN_NAME = 'comprehensive_employee_id'")) {
             
             stmt.setString(1, DatabaseConfig.DB_NAME);
-            ResultSet rs = stmt.executeQuery();
-            
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
             }
         } catch (SQLException e) {
             System.err.println("Error checking for comprehensive_employee_id column: " + e.getMessage());
@@ -733,30 +736,30 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
             // Use the basic employee ID format (EMP###) for foreign key constraint
             String employeeId = String.format("EMP%03d", employee.getEmployeeId());
             stmt.setString(1, employeeId);
-            ResultSet rs = stmt.executeQuery();
-            
-            if (rs.next()) {
-                employee.setPersonalEmail(rs.getString("personal_email"));
-                employee.setWorkPhone(rs.getString("work_phone"));
-                employee.setEmergencyContact(rs.getString("emergency_contact"));
-                employee.setEmergencyPhone(rs.getString("emergency_phone"));
-                employee.setStreetAddress(rs.getString("street_address"));
-                employee.setBarangay(rs.getString("barangay"));
-                employee.setCity(rs.getString("city"));
-                employee.setProvinceState(rs.getString("province_state"));
-                employee.setCountry(rs.getString("country"));
-                employee.setZipCode(rs.getString("zip_code"));
-                
-                java.sql.Date birthDate = rs.getDate("birth_date");
-                if (birthDate != null) {
-                    employee.setBirthDate(birthDate.toLocalDate());
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    employee.setPersonalEmail(rs.getString("personal_email"));
+                    employee.setWorkPhone(rs.getString("work_phone"));
+                    employee.setEmergencyContact(rs.getString("emergency_contact"));
+                    employee.setEmergencyPhone(rs.getString("emergency_phone"));
+                    employee.setStreetAddress(rs.getString("street_address"));
+                    employee.setBarangay(rs.getString("barangay"));
+                    employee.setCity(rs.getString("city"));
+                    employee.setProvinceState(rs.getString("province_state"));
+                    employee.setCountry(rs.getString("country"));
+                    employee.setZipCode(rs.getString("zip_code"));
+                    
+                    java.sql.Date birthDate = rs.getDate("birth_date");
+                    if (birthDate != null) {
+                        employee.setBirthDate(birthDate.toLocalDate());
+                    }
+                    
+                    employee.setSocialSecurityNumber(rs.getString("social_security_number"));
+                    employee.setNationality(rs.getString("nationality"));
+                    employee.setMaritalStatus(rs.getString("marital_status"));
+                    
+                    return true;
                 }
-                
-                employee.setSocialSecurityNumber(rs.getString("social_security_number"));
-                employee.setNationality(rs.getString("nationality"));
-                employee.setMaritalStatus(rs.getString("marital_status"));
-                
-                return true;
             }
         } catch (SQLException e) {
             System.err.println("Error loading employee contact info: " + e.getMessage());
@@ -821,26 +824,27 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
             String employeeIdString = String.format("EMP%03d", employee.getEmployeeId());
             System.out.println("Loading documents for employee ID: " + employeeIdString + " (Formatted ID: " + employee.getFormattedEmployeeId() + ")");
             stmt.setString(1, employeeIdString);
-            ResultSet rs = stmt.executeQuery();
             
-            int documentCount = 0;
-            while (rs.next()) {
-                EmployeeDocument document = new EmployeeDocument(
-                    rs.getInt("id"),
-                    employee.getEmployeeId(),
-                    rs.getString("document_type"),
-                    rs.getString("file_name"),
-                    rs.getString("file_path"),
-                    rs.getBytes("file_data"),
-                    rs.getString("description"),
-                    rs.getTimestamp("created_at").toLocalDateTime(),
-                    rs.getString("uploaded_by")
-                );
-                documents.add(document);
-                documentCount++;
-                System.out.println("Loaded document [" + documentCount + "]: " + document.getFileName() + " (ID: " + document.getDocumentId() + ")");
+            try (ResultSet rs = stmt.executeQuery()) {
+                int documentCount = 0;
+                while (rs.next()) {
+                    EmployeeDocument document = new EmployeeDocument(
+                        rs.getInt("id"),
+                        employee.getEmployeeId(),
+                        rs.getString("document_type"),
+                        rs.getString("file_name"),
+                        rs.getString("file_path"),
+                        rs.getBytes("file_data"),
+                        rs.getString("description"),
+                        rs.getTimestamp("created_at").toLocalDateTime(),
+                        rs.getString("uploaded_by")
+                    );
+                    documents.add(document);
+                    documentCount++;
+                    System.out.println("Loaded document [" + documentCount + "]: " + document.getFileName() + " (ID: " + document.getDocumentId() + ")");
+                }
+                System.out.println("Total loaded " + documentCount + " documents for employee: " + employeeIdString);
             }
-            System.out.println("Total loaded " + documentCount + " documents for employee: " + employeeIdString);
         } catch (SQLException e) {
             System.err.println("Error loading employee documents: " + e.getMessage());
             e.printStackTrace();
@@ -861,6 +865,293 @@ public class MySQLDatabaseDAO implements DatabaseDAO {
             return rowsAffected > 0;
         } catch (SQLException e) {
             System.err.println("Error deleting employee document: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    // Salary Component operations
+    @Override
+    public List<SalaryComponent> getAllSalaryComponents() {
+        List<SalaryComponent> components = new ArrayList<>();
+        String query = "SELECT id, name, description, type, amount, is_percentage, is_active, " +
+                      "created_date, last_modified, created_by, modified_by " +
+                      "FROM salary_components " +
+                      "ORDER BY name";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            while (rs.next()) {
+                SalaryComponent component = new SalaryComponent(
+                    rs.getInt("id"),
+                    rs.getString("name"),
+                    rs.getString("type"),
+                    BigDecimal.valueOf(rs.getDouble("amount")),
+                    rs.getString("description"),
+                    rs.getBoolean("is_percentage"),
+                    rs.getBoolean("is_active")
+                );
+                
+                // Set additional fields
+                if (rs.getDate("created_date") != null) {
+                    component.setCreatedDate(rs.getDate("created_date").toLocalDate());
+                }
+                if (rs.getDate("last_modified") != null) {
+                    component.setLastModified(rs.getDate("last_modified").toLocalDate());
+                }
+                component.setCreatedBy(rs.getString("created_by"));
+                component.setModifiedBy(rs.getString("modified_by"));
+                
+                components.add(component);
+            }
+        } catch (SQLException e) {
+            System.err.println("Error retrieving salary components: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return components;
+    }
+    
+    @Override
+    public SalaryComponent getSalaryComponentById(int id) {
+        String query = "SELECT id, name, description, type, amount, is_percentage, is_active, " +
+                      "created_date, last_modified, created_by, modified_by " +
+                      "FROM salary_components WHERE id = ?";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            stmt.setInt(1, id);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    SalaryComponent component = new SalaryComponent(
+                        rs.getInt("id"),
+                        rs.getString("name"),
+                        rs.getString("type"),
+                        BigDecimal.valueOf(rs.getDouble("amount")),
+                        rs.getString("description"),
+                        rs.getBoolean("is_percentage"),
+                        rs.getBoolean("is_active")
+                    );
+                    
+                    // Set additional fields
+                    if (rs.getDate("created_date") != null) {
+                        component.setCreatedDate(rs.getDate("created_date").toLocalDate());
+                    }
+                    if (rs.getDate("last_modified") != null) {
+                        component.setLastModified(rs.getDate("last_modified").toLocalDate());
+                    }
+                    component.setCreatedBy(rs.getString("created_by"));
+                    component.setModifiedBy(rs.getString("modified_by"));
+                    
+                    return component;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error retrieving salary component: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
+    }
+    
+    @Override
+    public boolean insertSalaryComponent(SalaryComponent component) {
+        String query = "INSERT INTO salary_components (name, description, type, amount, is_percentage, " +
+                      "is_active, created_date, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            stmt.setString(1, component.getName());
+            stmt.setString(2, component.getDescription());
+            stmt.setString(3, component.getType());
+            stmt.setBigDecimal(4, component.getAmount());
+            stmt.setBoolean(5, component.isPercentage());
+            stmt.setBoolean(6, component.isActive());
+            stmt.setDate(7, java.sql.Date.valueOf(component.getCreatedDate()));
+            stmt.setString(8, component.getCreatedBy());
+            
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
+        } catch (SQLException e) {
+            System.err.println("Error inserting salary component: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    @Override
+    public boolean updateSalaryComponent(SalaryComponent component) {
+        String query = "UPDATE salary_components SET name = ?, description = ?, type = ?, " +
+                      "amount = ?, is_percentage = ?, is_active = ?, last_modified = ?, " +
+                      "modified_by = ? WHERE id = ?";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            stmt.setString(1, component.getName());
+            stmt.setString(2, component.getDescription());
+            stmt.setString(3, component.getType());
+            stmt.setBigDecimal(4, component.getAmount());
+            stmt.setBoolean(5, component.isPercentage());
+            stmt.setBoolean(6, component.isActive());
+            stmt.setDate(7, java.sql.Date.valueOf(component.getLastModified()));
+            stmt.setString(8, component.getModifiedBy());
+            stmt.setInt(9, component.getId());
+            
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
+        } catch (SQLException e) {
+            System.err.println("Error updating salary component: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    @Override
+    public boolean deleteSalaryComponent(int id) {
+        String query = "UPDATE salary_components SET is_active = false WHERE id = ?";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            stmt.setInt(1, id);
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
+        } catch (SQLException e) {
+            System.err.println("Error deleting salary component: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    // Employee Salary Component operations
+    @Override
+    public List<EmployeeSalaryComponent> getEmployeeSalaryComponents(String employeeId) {
+        List<EmployeeSalaryComponent> components = new ArrayList<>();
+        String query = "SELECT esc.id, esc.employee_id, esc.salary_component_id, esc.custom_amount, " +
+                      "esc.is_percentage, esc.is_active, esc.effective_date, esc.end_date, " +
+                      "esc.created_date, esc.created_by, esc.remarks, " +
+                      "sc.name AS component_name, sc.type AS component_type " +
+                      "FROM employee_salary_components esc " +
+                      "JOIN salary_components sc ON esc.salary_component_id = sc.id " +
+                      "WHERE esc.employee_id = ? " +
+                      "ORDER BY esc.effective_date DESC";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            stmt.setString(1, employeeId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    EmployeeSalaryComponent empComponent = new EmployeeSalaryComponent(
+                        rs.getString("employee_id"),
+                        rs.getInt("salary_component_id"),
+                        BigDecimal.valueOf(rs.getDouble("custom_amount"))
+                    );
+                    
+                    // Set additional fields
+                    empComponent.setId(rs.getInt("id"));
+                    empComponent.setPercentage(rs.getBoolean("is_percentage"));
+                    empComponent.setActive(rs.getBoolean("is_active"));
+                    
+                    if (rs.getDate("effective_date") != null) {
+                        empComponent.setEffectiveDate(rs.getDate("effective_date").toLocalDate());
+                    }
+                    if (rs.getDate("end_date") != null) {
+                        empComponent.setEndDate(rs.getDate("end_date").toLocalDate());
+                    }
+                    if (rs.getDate("created_date") != null) {
+                        empComponent.setCreatedDate(rs.getDate("created_date").toLocalDate());
+                    }
+                    
+                    empComponent.setCreatedBy(rs.getString("created_by"));
+                    empComponent.setRemarks(rs.getString("remarks"));
+                    
+                    // Create and set the salary component
+                    SalaryComponent salaryComponent = new SalaryComponent();
+                    salaryComponent.setId(rs.getInt("salary_component_id"));
+                    salaryComponent.setName(rs.getString("component_name"));
+                    salaryComponent.setType(rs.getString("component_type"));
+                    empComponent.setSalaryComponent(salaryComponent);
+                    
+                    components.add(empComponent);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error retrieving employee salary components: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return components;
+    }
+    
+    @Override
+    public boolean insertEmployeeSalaryComponent(EmployeeSalaryComponent empComponent) {
+        String query = "INSERT INTO employee_salary_components (employee_id, salary_component_id, " +
+                      "custom_amount, is_percentage, is_active, effective_date, created_date, " +
+                      "created_by, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            stmt.setString(1, empComponent.getEmployeeId());
+            stmt.setInt(2, empComponent.getSalaryComponentId());
+            stmt.setBigDecimal(3, empComponent.getCustomAmount());
+            stmt.setBoolean(4, empComponent.isPercentage());
+            stmt.setBoolean(5, empComponent.isActive());
+            stmt.setDate(6, java.sql.Date.valueOf(empComponent.getEffectiveDate()));
+            stmt.setDate(7, java.sql.Date.valueOf(empComponent.getCreatedDate()));
+            stmt.setString(8, empComponent.getCreatedBy());
+            stmt.setString(9, empComponent.getRemarks());
+            
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
+        } catch (SQLException e) {
+            System.err.println("Error inserting employee salary component: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    @Override
+    public boolean updateEmployeeSalaryComponent(EmployeeSalaryComponent empComponent) {
+        String query = "UPDATE employee_salary_components SET custom_amount = ?, is_percentage = ?, " +
+                      "is_active = ?, effective_date = ?, end_date = ?, " +
+                      "remarks = ? WHERE id = ?";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            stmt.setBigDecimal(1, empComponent.getCustomAmount());
+            stmt.setBoolean(2, empComponent.isPercentage());
+            stmt.setBoolean(3, empComponent.isActive());
+            stmt.setDate(4, java.sql.Date.valueOf(empComponent.getEffectiveDate()));
+            stmt.setDate(5, empComponent.getEndDate() != null ? java.sql.Date.valueOf(empComponent.getEndDate()) : null);
+            stmt.setString(6, empComponent.getRemarks());
+            stmt.setInt(7, empComponent.getId());
+            
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
+        } catch (SQLException e) {
+            System.err.println("Error updating employee salary component: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false;
+    }
+    
+    @Override
+    public boolean deleteEmployeeSalaryComponent(int id) {
+        String query = "UPDATE employee_salary_components SET is_active = false WHERE id = ?";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            stmt.setInt(1, id);
+            int rowsAffected = stmt.executeUpdate();
+            return rowsAffected > 0;
+        } catch (SQLException e) {
+            System.err.println("Error deleting employee salary component: " + e.getMessage());
             e.printStackTrace();
         }
         return false;

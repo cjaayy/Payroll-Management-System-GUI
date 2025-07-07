@@ -17,8 +17,9 @@ import java.util.List;
  * Dialog for adding/editing employees with enhanced features
  */
 public class EmployeeDialog extends JDialog {
-    private EmployeeManager employeeManager;
-    private Employee employee;
+    private static final long serialVersionUID = 1L;
+    private transient EmployeeManager employeeManager;
+    private transient Employee employee;
     private boolean confirmed = false;
     
     // Tabbed pane

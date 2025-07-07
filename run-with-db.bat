@@ -1,8 +1,7 @@
 @echo off
 echo ===============================================
-echo    Payroll Management System - Build Only
+echo    Payroll Management System - With DB Config
 echo ===============================================
-echo.
 cd /d "%~dp0"
 
 REM Check if MySQL JDBC driver exists
@@ -16,11 +15,8 @@ for %%f in ("lib\mysql-connector-*.jar") do (
 
 if %MYSQL_DRIVER_FOUND%==0 (
     echo [ERROR] MySQL JDBC Driver not found!
-    echo.
     echo Please download the MySQL JDBC driver and place it in the lib/ directory.
     echo Download from: https://dev.mysql.com/downloads/connector/j/
-    echo.
-    echo For detailed instructions, see MYSQL_SETUP.md
     pause
     exit /b 1
 )
@@ -34,7 +30,7 @@ mkdir "classes"
 
 REM Compile Java files
 echo [INFO] Compiling Java source files...
-javac -d classes -cp "lib/*;src" src\models\*.java src\managers\*.java src\gui\*.java src\database\*.java
+javac -d classes -cp "lib/*;src" src\models\*.java src\managers\*.java src\gui\*.java src\database\*.java src\utils\*.java src\test\*.java
 
 if %errorlevel% neq 0 (
     echo [ERROR] Compilation failed!
@@ -42,6 +38,23 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo [INFO] Build successful!
+echo [INFO] Compilation successful!
+
+REM Get database credentials from user
 echo.
+echo [SETUP] Database Configuration Required:
+echo Please enter your MySQL database credentials:
+echo.
+set /p DB_USER="Enter MySQL username (default: root): "
+if "%DB_USER%"=="" set DB_USER=root
+
+set /p DB_PASS="Enter MySQL password (leave blank if no password): "
+
+echo.
+echo [INFO] Starting Payroll Management System...
+echo [INFO] Using database credentials: %DB_USER%@localhost
+echo.
+
+REM Run the application with database credentials
+java -Ddb.username=%DB_USER% -Ddb.password=%DB_PASS% -cp "lib/*;classes" gui.PayrollManagementSystemGUI
 pause

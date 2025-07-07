@@ -1,28 +1,27 @@
 package managers;
 
 import models.User;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Authentication Manager for user login/logout
  */
 public class AuthenticationManager {
-    private Map<String, User> users;
+    private UserManager userManager;
     private User currentUser;
     
     public AuthenticationManager() {
-        users = new HashMap<>();
-        // Initialize default users
-        users.put("admin", new User("admin", "admin123", "admin"));
-        users.put("hr", new User("hr", "hr123", "hr"));
+        this.userManager = new UserManager();
     }
     
     public boolean login(String username, String password) {
-        User user = users.get(username);
-        if (user != null && user.getPassword().equals(password)) {
-            currentUser = user;
-            return true;
+        try {
+            User user = userManager.authenticateUser(username, password);
+            if (user != null) {
+                currentUser = user;
+                return true;
+            }
+        } catch (Exception e) {
+            System.err.println("Login error: " + e.getMessage());
         }
         return false;
     }
@@ -40,6 +39,72 @@ public class AuthenticationManager {
     }
     
     public boolean hasAdminRole() {
-        return currentUser != null && "admin".equals(currentUser.getRole());
+        return currentUser != null && currentUser.getRole() != null && 
+               currentUser.getRole().name().equals("ADMIN");
+    }
+    
+    public boolean hasHRRole() {
+        return currentUser != null && currentUser.getRole() != null && 
+               currentUser.getRole().name().equals("HR_OFFICER");
+    }
+    
+    public boolean hasPayrollRole() {
+        return currentUser != null && currentUser.getRole() != null && 
+               currentUser.getRole().name().equals("PAYROLL_OFFICER");
+    }
+    
+    public boolean hasAdminOrHRRole() {
+        return hasAdminRole() || hasHRRole();
+    }
+    
+    public boolean hasAdminOrPayrollRole() {
+        return hasAdminRole() || hasPayrollRole();
+    }
+    
+    public boolean hasAdminOrHROrPayrollRole() {
+        return hasAdminRole() || hasHRRole() || hasPayrollRole();
+    }
+    
+    public boolean hasEmployeeManagementAccess() {
+        return currentUser != null && currentUser.hasPermission("employee.manage");
+    }
+    
+    public boolean hasPayrollManagementAccess() {
+        return currentUser != null && currentUser.hasPermission("payroll.manage");
+    }
+    
+    public boolean hasUserManagementAccess() {
+        return currentUser != null && currentUser.hasPermission("user.manage");
+    }
+    
+    public UserManager getUserManager() {
+        return userManager;
+    }
+    
+    public boolean changePassword(String oldPassword, String newPassword) {
+        if (currentUser != null) {
+            try {
+                // Use UserManager to verify old password and change to new one
+                return userManager.changePassword(currentUser.getUserId(), newPassword, currentUser.getUsername());
+            } catch (Exception e) {
+                System.err.println("Password change error: " + e.getMessage());
+            }
+        }
+        return false;
+    }
+    
+    public boolean refreshCurrentUser() {
+        if (currentUser != null) {
+            try {
+                User refreshedUser = userManager.getUserByUsername(currentUser.getUsername());
+                if (refreshedUser != null) {
+                    currentUser = refreshedUser;
+                    return true;
+                }
+            } catch (Exception e) {
+                System.err.println("User refresh error: " + e.getMessage());
+            }
+        }
+        return false;
     }
 }

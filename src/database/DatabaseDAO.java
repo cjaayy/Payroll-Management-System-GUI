@@ -3,6 +3,8 @@ package database;
 import models.Employee;
 import models.Payroll;
 import models.User;
+import models.SalaryComponent;
+import models.EmployeeSalaryComponent;
 import java.util.List;
 
 /**
@@ -27,6 +29,19 @@ public interface DatabaseDAO {
     boolean insertPayroll(Payroll payroll);
     boolean updatePayroll(Payroll payroll);
     boolean deletePayroll(int payrollId);
+    
+    // Salary Component operations
+    List<SalaryComponent> getAllSalaryComponents();
+    SalaryComponent getSalaryComponentById(int id);
+    boolean insertSalaryComponent(SalaryComponent component);
+    boolean updateSalaryComponent(SalaryComponent component);
+    boolean deleteSalaryComponent(int id);
+    
+    // Employee Salary Component operations
+    List<EmployeeSalaryComponent> getEmployeeSalaryComponents(String employeeId);
+    boolean insertEmployeeSalaryComponent(EmployeeSalaryComponent empComponent);
+    boolean updateEmployeeSalaryComponent(EmployeeSalaryComponent empComponent);
+    boolean deleteEmployeeSalaryComponent(int id);
     
     // Database management
     boolean testConnection();

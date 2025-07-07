@@ -10,16 +10,57 @@ import java.util.*;
 public class PayrollManager {
     private Map<Integer, Payroll> payrolls;
     private int nextPayrollId;
+    private SalaryComponentManager salaryComponentManager;
     
     public PayrollManager() {
         payrolls = new HashMap<>();
         nextPayrollId = 1;
+        salaryComponentManager = new SalaryComponentManager();
+    }
+    
+    /**
+     * Set salary component manager (for dependency injection)
+     */
+    public void setSalaryComponentManager(SalaryComponentManager salaryComponentManager) {
+        this.salaryComponentManager = salaryComponentManager;
+    }
+    
+    /**
+     * Get salary component manager
+     */
+    public SalaryComponentManager getSalaryComponentManager() {
+        return salaryComponentManager;
     }
     
     public Payroll createPayroll(int employeeId, String payPeriod, double basePay, 
                                double overtime, double bonuses, double deductions, LocalDate payDate) {
         Payroll payroll = new Payroll(nextPayrollId++, employeeId, payPeriod, basePay, 
                                     overtime, bonuses, deductions, payDate);
+        
+        // Apply salary components if available
+        if (salaryComponentManager != null) {
+            Map<String, Double> breakdown = salaryComponentManager.getSalaryBreakdown(employeeId, basePay);
+            payroll.setSalaryBreakdown(breakdown);
+        }
+        
+        payrolls.put(payroll.getPayrollId(), payroll);
+        return payroll;
+    }
+    
+    /**
+     * Create payroll with automatic salary component calculation
+     */
+    public Payroll createPayrollWithComponents(int employeeId, String payPeriod, double basePay, 
+                                             double overtime, LocalDate payDate) {
+        Payroll payroll = new Payroll(nextPayrollId++, employeeId, payPeriod, basePay, 
+                                    overtime, 0.0, 0.0, payDate);
+        
+        // Apply salary components
+        if (salaryComponentManager != null) {
+            Map<String, Double> breakdown = salaryComponentManager.getSalaryBreakdown(employeeId, basePay);
+            payroll.setSalaryBreakdown(breakdown);
+        }
+        
         payrolls.put(payroll.getPayrollId(), payroll);
         return payroll;
     }
