@@ -14,8 +14,55 @@ GRANT ALL PRIVILEGES ON payroll_system.* TO 'payroll_user'@'localhost';
 FLUSH PRIVILEGES;
 
 -- Step 3: Create Tables
--- Users table for authentication
+-- Enhanced Users table for comprehensive authentication and security
 CREATE TABLE IF NOT EXISTS users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(255),
+    salt VARCHAR(32),
+    password VARCHAR(255), -- Legacy field for backward compatibility
+    email VARCHAR(100) UNIQUE,
+    full_name VARCHAR(100),
+    role ENUM('ADMIN', 'HR_OFFICER', 'PAYROLL_OFFICER', 'EMPLOYEE') NOT NULL DEFAULT 'EMPLOYEE',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP NULL,
+    last_password_change TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    failed_login_attempts INT DEFAULT 0,
+    lockout_until TIMESTAMP NULL,
+    created_by VARCHAR(50),
+    last_modified_by VARCHAR(50),
+    last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    INDEX idx_username (username),
+    INDEX idx_email (email),
+    INDEX idx_role (role),
+    INDEX idx_active (is_active)
+);
+
+-- Audit Trail table for comprehensive security logging
+CREATE TABLE IF NOT EXISTS audit_trail (
+    audit_id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL,
+    action VARCHAR(100) NOT NULL,
+    table_name VARCHAR(50),
+    record_id VARCHAR(50),
+    old_values TEXT,
+    new_values TEXT,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_success BOOLEAN DEFAULT TRUE,
+    error_message TEXT,
+    
+    INDEX idx_username (username),
+    INDEX idx_action (action),
+    INDEX idx_timestamp (timestamp),
+    INDEX idx_table_record (table_name, record_id)
+);
+
+-- Legacy users table mapping for backward compatibility
+CREATE TABLE IF NOT EXISTS legacy_users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
@@ -156,6 +203,9 @@ CREATE TABLE IF NOT EXISTS payroll (
     overtime_rate DECIMAL(5, 2) DEFAULT 0,
     bonus DECIMAL(10, 2) DEFAULT 0,
     deductions DECIMAL(10, 2) DEFAULT 0,
+    total_allowances DECIMAL(10, 2) DEFAULT 0,
+    total_custom_deductions DECIMAL(10, 2) DEFAULT 0,
+    total_custom_bonuses DECIMAL(10, 2) DEFAULT 0,
     gross_pay DECIMAL(10, 2) NOT NULL,
     tax_deduction DECIMAL(10, 2) DEFAULT 0,
     net_pay DECIMAL(10, 2) NOT NULL,
@@ -165,10 +215,53 @@ CREATE TABLE IF NOT EXISTS payroll (
     FOREIGN KEY (employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE
 );
 
+-- Salary Components table
+CREATE TABLE IF NOT EXISTS salary_components (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    type VARCHAR(20) NOT NULL, -- EARNING, DEDUCTION, ALLOWANCE, BONUS
+    amount DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    is_percentage BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_date DATE DEFAULT (CURRENT_DATE),
+    last_modified DATE DEFAULT (CURRENT_DATE),
+    created_by VARCHAR(50),
+    modified_by VARCHAR(50),
+    UNIQUE KEY unique_component_name (name, type)
+);
+
+-- Employee Salary Components table (linking employees to their specific salary components)
+CREATE TABLE IF NOT EXISTS employee_salary_components (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_id VARCHAR(20) NOT NULL,
+    salary_component_id INT NOT NULL,
+    custom_amount DECIMAL(10, 2) NOT NULL,
+    is_percentage BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    effective_date DATE NOT NULL,
+    end_date DATE NULL,
+    created_date DATE DEFAULT (CURRENT_DATE),
+    created_by VARCHAR(50),
+    remarks TEXT,
+    FOREIGN KEY (employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE,
+    FOREIGN KEY (salary_component_id) REFERENCES salary_components(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_employee_component (employee_id, salary_component_id, effective_date)
+);
+
 -- Step 4: Insert Default Data
--- Insert default admin user
-INSERT IGNORE INTO users (username, password, role) 
-VALUES ('admin', 'admin123', 'ADMIN');
+-- Insert default admin user with enhanced security
+-- Note: Password will be hashed by the application, this is for legacy compatibility
+INSERT IGNORE INTO users (username, password, email, full_name, role, created_by, last_modified_by) 
+VALUES ('admin', 'admin123', 'admin@company.com', 'System Administrator', 'ADMIN', 'SYSTEM', 'SYSTEM');
+
+-- Insert default HR officer
+INSERT IGNORE INTO users (username, password, email, full_name, role, created_by, last_modified_by) 
+VALUES ('hr_officer', 'hr123', 'hr@company.com', 'HR Officer', 'HR_OFFICER', 'SYSTEM', 'SYSTEM');
+
+-- Insert default payroll officer
+INSERT IGNORE INTO users (username, password, email, full_name, role, created_by, last_modified_by) 
+VALUES ('payroll', 'payroll123', 'payroll@company.com', 'Payroll Officer', 'PAYROLL_OFFICER', 'SYSTEM', 'SYSTEM');
 
 -- Insert sample employees (optional)
 INSERT IGNORE INTO employees (employee_id, first_name, last_name, email, phone, department, position, job_title, manager, hire_date, salary) 
@@ -176,6 +269,74 @@ VALUES
 ('EMP001', 'John', 'Doe', 'john.doe@company.com', '555-0101', 'IT', 'Software Developer', 'Senior Software Developer', 'Jane Smith', '2024-01-15', 75000.00),
 ('EMP002', 'Jane', 'Smith', 'jane.smith@company.com', '555-0102', 'HR', 'HR Manager', 'Human Resources Manager', 'Michael Johnson', '2024-02-01', 65000.00),
 ('EMP003', 'Mike', 'Johnson', 'mike.johnson@company.com', '555-0103', 'Finance', 'Accountant', 'Senior Accountant', 'Sarah Davis', '2024-03-01', 55000.00);
+
+-- Insert default salary components for Philippine payroll system
+INSERT IGNORE INTO salary_components (name, type, amount, description, is_active, is_percentage, created_by, modified_by) VALUES
+-- Philippine Standard Allowances
+('Rice Allowance', 'EARNING', 2000.00, 'Monthly rice subsidy allowance', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+('Transportation Allowance', 'EARNING', 2000.00, 'Daily transportation allowance', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+('Meal Allowance', 'EARNING', 1500.00, 'Daily meal allowance', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+('Connectivity Allowance', 'EARNING', 1000.00, 'Internet/Communication allowance', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+('Clothing Allowance', 'EARNING', 6000.00, 'Annual clothing allowance', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+('Medical Allowance', 'EARNING', 3000.00, 'Medical expenses allowance', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+('Education Allowance', 'EARNING', 5000.00, 'Education allowance for children', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+
+-- Philippine Holiday and Overtime Pay
+('Overtime Pay', 'EARNING', 0.00, 'Overtime pay (25% to 100% premium)', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+('Holiday Pay', 'EARNING', 0.00, 'Holiday premium pay', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+('Night Differential', 'EARNING', 0.00, 'Night shift differential (10% minimum)', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+('Hazard Pay', 'EARNING', 0.00, 'Hazard duty pay', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+
+-- Philippine Mandatory Deductions
+('SSS Contribution', 'DEDUCTION', 0.00, 'Social Security System contribution', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+('PhilHealth Contribution', 'DEDUCTION', 0.00, 'Philippine Health Insurance Corporation', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+('Pag-IBIG Contribution', 'DEDUCTION', 0.00, 'Home Development Mutual Fund', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+('Withholding Tax', 'DEDUCTION', 0.00, 'Bureau of Internal Revenue tax', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+
+-- Other Deductions
+('Tardiness', 'DEDUCTION', 0.00, 'Late arrival deduction', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+('Absences', 'DEDUCTION', 0.00, 'Absence deduction', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+('Cash Advance', 'DEDUCTION', 0.00, 'Employee cash advance deduction', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+('Loan Payment', 'DEDUCTION', 0.00, 'Employee loan payment', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+
+-- Philippine Special Pay
+('13th Month Pay', 'EARNING', 0.00, 'Mandatory 13th month pay (1/12 of annual basic salary)', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+('Performance Bonus', 'EARNING', 0.00, 'Performance-based bonus', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+('Service Incentive Leave', 'EARNING', 0.00, 'Monetized leave credits', TRUE, FALSE, 'SYSTEM', 'SYSTEM'),
+('Tax Refund', 'EARNING', 0.00, 'Tax over-withholding refund', TRUE, FALSE, 'SYSTEM', 'SYSTEM');
+
+-- Insert sample Philippine employee salary components
+INSERT IGNORE INTO employee_salary_components (employee_id, salary_component_id, custom_amount, is_percentage, effective_date, is_active, created_by, remarks) VALUES
+-- John Doe (EMP001) - IT Developer (PHP 50,000 monthly)
+('EMP001', 1, 2000.00, FALSE, '2024-01-15', TRUE, 'SYSTEM', 'Standard rice allowance'),  -- Rice Allowance
+('EMP001', 2, 2500.00, FALSE, '2024-01-15', TRUE, 'SYSTEM', 'IT transport allowance'),  -- Transportation Allowance
+('EMP001', 3, 2000.00, FALSE, '2024-01-15', TRUE, 'SYSTEM', 'Daily meal allowance'),  -- Meal Allowance
+('EMP001', 4, 1500.00, FALSE, '2024-01-15', TRUE, 'SYSTEM', 'IT connectivity allowance'),  -- Connectivity Allowance
+('EMP001', 13, 240.00, FALSE, '2024-01-15', TRUE, 'SYSTEM', 'SSS employee contribution'),  -- SSS Contribution (employee share)
+('EMP001', 14, 1250.00, FALSE, '2024-01-15', TRUE, 'SYSTEM', 'PhilHealth employee contribution'), -- PhilHealth Contribution (employee share)
+('EMP001', 15, 100.00, FALSE, '2024-01-15', TRUE, 'SYSTEM', 'Pag-IBIG employee contribution'),  -- Pag-IBIG Contribution (employee share)
+('EMP001', 16, 4500.00, FALSE, '2024-01-15', TRUE, 'SYSTEM', 'Monthly withholding tax'), -- Withholding Tax
+
+-- Jane Smith (EMP002) - HR Manager (PHP 45,000 monthly)
+('EMP002', 1, 2000.00, FALSE, '2024-02-01', TRUE, 'SYSTEM', 'Standard rice allowance'),  -- Rice Allowance
+('EMP002', 2, 2200.00, FALSE, '2024-02-01', TRUE, 'SYSTEM', 'HR transport allowance'),  -- Transportation Allowance
+('EMP002', 3, 1800.00, FALSE, '2024-02-01', TRUE, 'SYSTEM', 'Daily meal allowance'),  -- Meal Allowance
+('EMP002', 4, 1200.00, FALSE, '2024-02-01', TRUE, 'SYSTEM', 'HR connectivity allowance'),  -- Connectivity Allowance
+('EMP002', 6, 3500.00, FALSE, '2024-02-01', TRUE, 'SYSTEM', 'Enhanced medical allowance'),  -- Medical Allowance
+('EMP002', 13, 217.50, FALSE, '2024-02-01', TRUE, 'SYSTEM', 'SSS employee contribution'),  -- SSS Contribution (employee share)
+('EMP002', 14, 1125.00, FALSE, '2024-02-01', TRUE, 'SYSTEM', 'PhilHealth employee contribution'), -- PhilHealth Contribution (employee share)
+('EMP002', 15, 90.00, FALSE, '2024-02-01', TRUE, 'SYSTEM', 'Pag-IBIG employee contribution'),   -- Pag-IBIG Contribution (employee share)
+('EMP002', 16, 3200.00, FALSE, '2024-02-01', TRUE, 'SYSTEM', 'Monthly withholding tax'), -- Withholding Tax
+
+-- Mike Johnson (EMP003) - Finance (PHP 40,000 monthly)
+('EMP003', 1, 2000.00, FALSE, '2024-03-01', TRUE, 'SYSTEM', 'Standard rice allowance'),  -- Rice Allowance
+('EMP003', 2, 2000.00, FALSE, '2024-03-01', TRUE, 'SYSTEM', 'Finance transport allowance'),  -- Transportation Allowance
+('EMP003', 3, 1600.00, FALSE, '2024-03-01', TRUE, 'SYSTEM', 'Daily meal allowance'),  -- Meal Allowance
+('EMP003', 4, 1000.00, FALSE, '2024-03-01', TRUE, 'SYSTEM', 'Finance connectivity allowance'),  -- Connectivity Allowance
+('EMP003', 13, 195.00, FALSE, '2024-03-01', TRUE, 'SYSTEM', 'SSS employee contribution'),  -- SSS Contribution (employee share)
+('EMP003', 14, 1000.00, FALSE, '2024-03-01', TRUE, 'SYSTEM', 'PhilHealth employee contribution'), -- PhilHealth Contribution (employee share)
+('EMP003', 15, 80.00, FALSE, '2024-03-01', TRUE, 'SYSTEM', 'Pag-IBIG employee contribution'),   -- Pag-IBIG Contribution (employee share)
+('EMP003', 16, 2100.00, FALSE, '2024-03-01', TRUE, 'SYSTEM', 'Monthly withholding tax'); -- Withholding Tax
 
 -- Insert Address Reference Data
 -- Countries

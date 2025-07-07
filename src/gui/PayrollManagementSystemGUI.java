@@ -3,6 +3,8 @@ package gui;
 import managers.AuthenticationManager;
 import managers.EmployeeManager;
 import managers.PayrollManager;
+import managers.SalaryComponentManager;
+import managers.UserManager;
 import database.DatabaseConnection;
 
 import javax.swing.*;
@@ -12,9 +14,13 @@ import java.awt.*;
  * Main GUI Application for Payroll Management System
  */
 public class PayrollManagementSystemGUI extends JFrame {
-    private AuthenticationManager authManager;
-    private EmployeeManager employeeManager;
-    private PayrollManager payrollManager;
+    private static final long serialVersionUID = 1L;
+    
+    private transient AuthenticationManager authManager;
+    private transient EmployeeManager employeeManager;
+    private transient PayrollManager payrollManager;
+    private transient SalaryComponentManager salaryComponentManager;
+    private transient UserManager userManager;
     private JPanel mainPanel;
     private CardLayout cardLayout;
     
@@ -42,6 +48,11 @@ public class PayrollManagementSystemGUI extends JFrame {
         authManager = new AuthenticationManager();
         employeeManager = new EmployeeManager();
         payrollManager = new PayrollManager();
+        salaryComponentManager = new SalaryComponentManager();
+        userManager = authManager.getUserManager(); // Use the same UserManager instance
+        
+        // Set up dependencies
+        payrollManager.setSalaryComponentManager(salaryComponentManager);
         
         initializeGUI();
         showLoginPanel();
@@ -62,12 +73,16 @@ public class PayrollManagementSystemGUI extends JFrame {
         EmployeePanel employeePanel = new EmployeePanel(this);
         PayrollPanel payrollPanel = new PayrollPanel(this);
         ReportsPanel reportsPanel = new ReportsPanel(this);
+        SalaryComponentPanel salaryComponentPanel = new SalaryComponentPanel(this);
+        UserManagementPanel userManagementPanel = new UserManagementPanel(this);
         
         mainPanel.add(loginPanel, "LOGIN");
         mainPanel.add(mainMenuPanel, "MAIN_MENU");
         mainPanel.add(employeePanel, "EMPLOYEE");
         mainPanel.add(payrollPanel, "PAYROLL");
         mainPanel.add(reportsPanel, "REPORTS");
+        mainPanel.add(salaryComponentPanel, "SALARY_COMPONENTS");
+        mainPanel.add(userManagementPanel, "USER_MANAGEMENT");
         
         add(mainPanel);
     }
@@ -100,6 +115,14 @@ public class PayrollManagementSystemGUI extends JFrame {
         cardLayout.show(mainPanel, "REPORTS");
     }
     
+    public void showSalaryComponentsPanel() {
+        cardLayout.show(mainPanel, "SALARY_COMPONENTS");
+    }
+    
+    public void showUserManagementPanel() {
+        cardLayout.show(mainPanel, "USER_MANAGEMENT");
+    }
+    
     public AuthenticationManager getAuthManager() {
         return authManager;
     }
@@ -110,6 +133,14 @@ public class PayrollManagementSystemGUI extends JFrame {
     
     public PayrollManager getPayrollManager() {
         return payrollManager;
+    }
+    
+    public SalaryComponentManager getSalaryComponentManager() {
+        return salaryComponentManager;
+    }
+    
+    public UserManager getUserManager() {
+        return userManager;
     }
     
     public static void main(String[] args) {

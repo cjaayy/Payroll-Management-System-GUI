@@ -205,6 +205,10 @@ import java.util.ArrayList;
     public int getEmployeeId() { return employeeId; }
     public void setEmployeeId(int employeeId) { this.employeeId = employeeId; }
     
+    public String getEmployeeIdString() { 
+        return String.format("EMP%03d", employeeId); 
+    }
+    
     public String getComprehensiveEmployeeId() { return comprehensiveEmployeeId; }
     public void setComprehensiveEmployeeId(String comprehensiveEmployeeId) { this.comprehensiveEmployeeId = comprehensiveEmployeeId; }
     

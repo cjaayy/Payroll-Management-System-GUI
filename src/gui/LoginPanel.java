@@ -9,6 +9,7 @@ import java.awt.event.ActionListener;
  * Login Panel for user authentication
  */
 public class LoginPanel extends JPanel {
+    private static final long serialVersionUID = 1L;
     private PayrollManagementSystemGUI mainApp;
     private JTextField usernameField;
     private JPasswordField passwordField;

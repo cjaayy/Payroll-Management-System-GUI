@@ -14,11 +14,12 @@ import java.util.List;
  * Employee Management Panel
  */
 public class EmployeePanel extends JPanel {
+    private static final long serialVersionUID = 1L;
     private PayrollManagementSystemGUI mainApp;
     private JTable employeeTable;
     private DefaultTableModel tableModel;
     private JButton addButton, editButton, deleteButton, searchButton, backButton;
-    private JButton viewButton, refreshButton, toggleStatusButton;
+    private JButton viewButton, refreshButton, toggleStatusButton, salaryComponentsButton;
     private JTextField searchField;
     
     public EmployeePanel(PayrollManagementSystemGUI mainApp) {
@@ -55,6 +56,10 @@ public class EmployeePanel extends JPanel {
         viewButton.setToolTipText("View comprehensive employee information (read-only)");
         refreshButton = new JButton("Refresh");
         toggleStatusButton = new JButton("Change Status");
+        
+        // Add salary components button
+        salaryComponentsButton = new JButton("Manage Salary");
+        salaryComponentsButton.setToolTipText("Manage employee salary components and allowances");
         
         // Search field
         searchField = new JTextField(20);
@@ -95,6 +100,10 @@ public class EmployeePanel extends JPanel {
         toggleStatusButton.setFont(buttonFont);
         toggleStatusButton.setBackground(new Color(138, 43, 226));
         toggleStatusButton.setForeground(Color.WHITE);
+        
+        salaryComponentsButton.setFont(buttonFont);
+        salaryComponentsButton.setBackground(new Color(32, 178, 170));
+        salaryComponentsButton.setForeground(Color.WHITE);
     }
     
     private void setupLayout() {
@@ -139,6 +148,8 @@ public class EmployeePanel extends JPanel {
         gbc.gridx = 4;
         controlPanel.add(toggleStatusButton, gbc);
         gbc.gridx = 5;
+        controlPanel.add(salaryComponentsButton, gbc);
+        gbc.gridx = 6;
         controlPanel.add(backButton, gbc);
         
         add(controlPanel, BorderLayout.SOUTH);
@@ -177,6 +188,13 @@ public class EmployeePanel extends JPanel {
             @Override
             public void actionPerformed(ActionEvent e) {
                 mainApp.showMainMenuPanel();
+            }
+        });
+        
+        salaryComponentsButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                manageSalaryComponents();
             }
         });
         
@@ -231,8 +249,8 @@ public class EmployeePanel extends JPanel {
     }
     
     private void showAddEmployeeDialog() {
-        if (!mainApp.getAuthManager().hasAdminRole()) {
-            JOptionPane.showMessageDialog(this, "Access denied. Admin privileges required.", 
+        if (!mainApp.getAuthManager().hasAdminOrHRRole()) {
+            JOptionPane.showMessageDialog(this, "Access denied. Admin or HR privileges required.", 
                                         "Access Denied", JOptionPane.ERROR_MESSAGE);
             return;
         }
@@ -267,8 +285,8 @@ public class EmployeePanel extends JPanel {
     }
     
     private void editSelectedEmployee() {
-        if (!mainApp.getAuthManager().hasAdminRole()) {
-            JOptionPane.showMessageDialog(this, "Access denied. Admin privileges required.", 
+        if (!mainApp.getAuthManager().hasAdminOrHRRole()) {
+            JOptionPane.showMessageDialog(this, "Access denied. Admin or HR privileges required.", 
                                         "Access Denied", JOptionPane.ERROR_MESSAGE);
             return;
         }
@@ -319,8 +337,8 @@ public class EmployeePanel extends JPanel {
     }
     
     private void deleteSelectedEmployee() {
-        if (!mainApp.getAuthManager().hasAdminRole()) {
-            JOptionPane.showMessageDialog(this, "Access denied. Admin privileges required.", 
+        if (!mainApp.getAuthManager().hasAdminOrHRRole()) {
+            JOptionPane.showMessageDialog(this, "Access denied. Admin or HR privileges required.", 
                                         "Access Denied", JOptionPane.ERROR_MESSAGE);
             return;
         }
@@ -868,8 +886,8 @@ public class EmployeePanel extends JPanel {
     }
     
     private void toggleEmployeeStatus() {
-        if (!mainApp.getAuthManager().hasAdminRole()) {
-            JOptionPane.showMessageDialog(this, "Access denied. Admin privileges required.", 
+        if (!mainApp.getAuthManager().hasAdminOrHRRole()) {
+            JOptionPane.showMessageDialog(this, "Access denied. Admin or HR privileges required.", 
                                         "Access Denied", JOptionPane.ERROR_MESSAGE);
             return;
         }
@@ -1142,6 +1160,32 @@ public class EmployeePanel extends JPanel {
                 "Error opening document: " + e.getMessage() + "\n" +
                 "You can try saving the file instead.", 
                 "Preview Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    private void manageSalaryComponents() {
+        int selectedRow = employeeTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Please select an employee to manage salary components.", 
+                                        "No Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        // Get the employee directly from the table data
+        // The table is populated from getAllEmployees(), so we can get the employee by index
+        List<Employee> employees = mainApp.getEmployeeManager().getAllEmployees();
+        
+        if (selectedRow < employees.size()) {
+            Employee employee = employees.get(selectedRow);
+            
+            EmployeeSalaryComponentDialog dialog = new EmployeeSalaryComponentDialog(
+                SwingUtilities.getWindowAncestor(this), 
+                mainApp.getSalaryComponentManager(), 
+                employee);
+            dialog.setVisible(true);
+        } else {
+            JOptionPane.showMessageDialog(this, "Employee not found.", 
+                                        "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 }

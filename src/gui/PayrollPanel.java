@@ -14,10 +14,11 @@ import java.util.List;
  * Payroll Management Panel
  */
 public class PayrollPanel extends JPanel {
+    private static final long serialVersionUID = 1L;
     private PayrollManagementSystemGUI mainApp;
     private JTable payrollTable;
     private DefaultTableModel tableModel;
-    private JButton addButton, editButton, deleteButton, viewByEmployeeButton, backButton;
+    private JButton editButton, deleteButton, viewByEmployeeButton, backButton, philippinePayrollButton, viewPayslipButton;
     private JTextField employeeIdField;
     
     public PayrollPanel(PayrollManagementSystemGUI mainApp) {
@@ -44,10 +45,11 @@ public class PayrollPanel extends JPanel {
         payrollTable.getTableHeader().setReorderingAllowed(false);
         
         // Buttons
-        addButton = new JButton("Create Payroll");
         editButton = new JButton("Edit Payroll");
         deleteButton = new JButton("Delete Payroll");
         viewByEmployeeButton = new JButton("View by Employee");
+        philippinePayrollButton = new JButton("Create Payroll");
+        viewPayslipButton = new JButton("View Payslip");
         backButton = new JButton("Back to Main Menu");
         
         // Employee ID field
@@ -57,10 +59,6 @@ public class PayrollPanel extends JPanel {
         // Style buttons
         Font buttonFont = new Font("Arial", Font.BOLD, 12);
         Color buttonColor = new Color(70, 130, 180);
-        
-        addButton.setFont(buttonFont);
-        addButton.setBackground(buttonColor);
-        addButton.setForeground(Color.WHITE);
         
         editButton.setFont(buttonFont);
         editButton.setBackground(buttonColor);
@@ -73,6 +71,14 @@ public class PayrollPanel extends JPanel {
         viewByEmployeeButton.setFont(buttonFont);
         viewByEmployeeButton.setBackground(buttonColor);
         viewByEmployeeButton.setForeground(Color.WHITE);
+        
+        philippinePayrollButton.setFont(buttonFont);
+        philippinePayrollButton.setBackground(new Color(32, 178, 170));
+        philippinePayrollButton.setForeground(Color.WHITE);
+        
+        viewPayslipButton.setFont(buttonFont);
+        viewPayslipButton.setBackground(new Color(255, 165, 0));
+        viewPayslipButton.setForeground(Color.WHITE);
         
         backButton.setFont(buttonFont);
         backButton.setBackground(new Color(128, 128, 128));
@@ -94,29 +100,35 @@ public class PayrollPanel extends JPanel {
         scrollPane.setPreferredSize(new Dimension(800, 400));
         add(scrollPane, BorderLayout.CENTER);
         
-        // Control panel
-        JPanel controlPanel = new JPanel(new FlowLayout());
-        controlPanel.add(new JLabel("Employee ID:"));
-        controlPanel.add(employeeIdField);
-        controlPanel.add(viewByEmployeeButton);
-        controlPanel.add(Box.createHorizontalStrut(20));
-        controlPanel.add(addButton);
-        controlPanel.add(editButton);
-        controlPanel.add(deleteButton);
-        controlPanel.add(Box.createHorizontalStrut(20));
-        controlPanel.add(backButton);
+        // Control panel with multiple rows
+        JPanel controlPanel = new JPanel(new BorderLayout());
+        controlPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        // Search panel (top row)
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        searchPanel.add(new JLabel("Employee ID:"));
+        searchPanel.add(employeeIdField);
+        searchPanel.add(viewByEmployeeButton);
+        
+        // Action buttons panel (middle row) 
+        JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
+        actionPanel.add(philippinePayrollButton);
+        actionPanel.add(editButton);
+        actionPanel.add(viewPayslipButton);
+        actionPanel.add(deleteButton);
+        
+        // Navigation panel (bottom row)
+        JPanel navigationPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        navigationPanel.add(backButton);
+        
+        controlPanel.add(searchPanel, BorderLayout.NORTH);
+        controlPanel.add(actionPanel, BorderLayout.CENTER);
+        controlPanel.add(navigationPanel, BorderLayout.SOUTH);
         
         add(controlPanel, BorderLayout.SOUTH);
     }
     
     private void setupEventListeners() {
-        addButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                showAddPayrollDialog();
-            }
-        });
-        
         editButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -135,6 +147,20 @@ public class PayrollPanel extends JPanel {
             @Override
             public void actionPerformed(ActionEvent e) {
                 viewPayrollsByEmployee();
+            }
+        });
+        
+        philippinePayrollButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                showPhilippinePayrollDialog();
+            }
+        });
+        
+        viewPayslipButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                viewSelectedPayslip();
             }
         });
         
@@ -158,19 +184,20 @@ public class PayrollPanel extends JPanel {
                 payroll.getPayrollId(),
                 employeeName,
                 payroll.getPayPeriod(),
-                String.format("$%.2f", payroll.getGrossPay()),
-                String.format("$%.2f", payroll.getTaxes()),
-                String.format("$%.2f", payroll.getNetPay()),
+                String.format("₱%.2f", payroll.getGrossPay()),
+                String.format("₱%.2f", payroll.getTaxes()),
+                String.format("₱%.2f", payroll.getNetPay()),
                 payroll.getPayDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
             };
             tableModel.addRow(rowData);
         }
     }
     
-    private void showAddPayrollDialog() {
-        PayrollDialog dialog = new PayrollDialog(SwingUtilities.getWindowAncestor(this), 
-                                                mainApp.getPayrollManager(), 
-                                                mainApp.getEmployeeManager(), null);
+    private void showPhilippinePayrollDialog() {
+        PhilippinePayrollDialog dialog = new PhilippinePayrollDialog(SwingUtilities.getWindowAncestor(this), 
+                                                                    mainApp.getPayrollManager(), 
+                                                                    mainApp.getEmployeeManager(), 
+                                                                    mainApp.getSalaryComponentManager(), null);
         dialog.setVisible(true);
         
         if (dialog.isConfirmed()) {
@@ -179,8 +206,8 @@ public class PayrollPanel extends JPanel {
     }
     
     private void editSelectedPayroll() {
-        if (!mainApp.getAuthManager().hasAdminRole()) {
-            JOptionPane.showMessageDialog(this, "Access denied. Admin privileges required.", 
+        if (!mainApp.getAuthManager().hasAdminOrHROrPayrollRole()) {
+            JOptionPane.showMessageDialog(this, "Access denied. Admin, HR, or Payroll privileges required.", 
                                         "Access Denied", JOptionPane.ERROR_MESSAGE);
             return;
         }
@@ -208,8 +235,8 @@ public class PayrollPanel extends JPanel {
     }
     
     private void deleteSelectedPayroll() {
-        if (!mainApp.getAuthManager().hasAdminRole()) {
-            JOptionPane.showMessageDialog(this, "Access denied. Admin privileges required.", 
+        if (!mainApp.getAuthManager().hasAdminOrHRRole()) {
+            JOptionPane.showMessageDialog(this, "Access denied. Admin or HR privileges required.", 
                                         "Access Denied", JOptionPane.ERROR_MESSAGE);
             return;
         }
@@ -235,6 +262,27 @@ public class PayrollPanel extends JPanel {
                 JOptionPane.showMessageDialog(this, "Failed to delete payroll record.", 
                                             "Error", JOptionPane.ERROR_MESSAGE);
             }
+        }
+    }
+    
+    private void viewSelectedPayslip() {
+        int selectedRow = payrollTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Please select a payroll record to view payslip.", 
+                                        "No Selection", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        
+        int payrollId = (Integer) tableModel.getValueAt(selectedRow, 0);
+        Payroll payroll = mainApp.getPayrollManager().getPayroll(payrollId);
+        
+        if (payroll != null) {
+            managers.PayslipGenerator payslipGenerator = new managers.PayslipGenerator(mainApp.getEmployeeManager());
+            PayslipDialog.showPayslipDialog(SwingUtilities.getWindowAncestor(this), 
+                                          mainApp.getEmployeeManager(), payslipGenerator, payroll);
+        } else {
+            JOptionPane.showMessageDialog(this, "Payroll record not found.", 
+                                        "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
     
@@ -279,9 +327,9 @@ public class PayrollPanel extends JPanel {
                     payroll.getPayrollId(),
                     employee.getFullName(),
                     payroll.getPayPeriod(),
-                    String.format("$%.2f", payroll.getGrossPay()),
-                    String.format("$%.2f", payroll.getTaxes()),
-                    String.format("$%.2f", payroll.getNetPay()),
+                    String.format("₱%.2f", payroll.getGrossPay()),
+                    String.format("₱%.2f", payroll.getTaxes()),
+                    String.format("₱%.2f", payroll.getNetPay()),
                     payroll.getPayDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
                 };
                 tableModel.addRow(rowData);

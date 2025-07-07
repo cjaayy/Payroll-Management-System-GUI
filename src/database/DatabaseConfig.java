@@ -11,8 +11,8 @@ public class DatabaseConfig {
     public static final String DB_URL = "jdbc:mysql://" + DB_HOST + ":" + DB_PORT + "/" + DB_NAME;
 
     // Database credentials
-    public static final String DB_USERNAME = "root";
-    public static final String DB_PASSWORD = "Jisoo@010322";
+    public static final String DB_USERNAME = System.getProperty("db.username", "root");
+    public static final String DB_PASSWORD = System.getProperty("db.password", "Jisoo@010322");
 
     // Connection pool settings
     public static final int MAX_CONNECTIONS = 10;

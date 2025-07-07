@@ -9,11 +9,14 @@ import java.awt.event.ActionListener;
  * Main Menu Panel
  */
 public class MainMenuPanel extends JPanel {
+    private static final long serialVersionUID = 1L;
     private PayrollManagementSystemGUI mainApp;
     private JLabel welcomeLabel;
     private JButton employeeButton;
     private JButton payrollButton;
     private JButton reportsButton;
+    private JButton salaryComponentsButton;
+    private JButton userManagementButton;
     private JButton logoutButton;
     
     public MainMenuPanel(PayrollManagementSystemGUI mainApp) {
@@ -30,6 +33,8 @@ public class MainMenuPanel extends JPanel {
         employeeButton = new JButton("Employee Management");
         payrollButton = new JButton("Payroll Management");
         reportsButton = new JButton("Reports");
+        salaryComponentsButton = new JButton("Salary Components");
+        userManagementButton = new JButton("User Management");
         logoutButton = new JButton("Logout");
         
         // Style buttons
@@ -50,6 +55,16 @@ public class MainMenuPanel extends JPanel {
         reportsButton.setBackground(buttonColor);
         reportsButton.setForeground(Color.WHITE);
         reportsButton.setPreferredSize(new Dimension(250, 50));
+        
+        salaryComponentsButton.setFont(buttonFont);
+        salaryComponentsButton.setBackground(new Color(32, 178, 170));
+        salaryComponentsButton.setForeground(Color.WHITE);
+        salaryComponentsButton.setPreferredSize(new Dimension(250, 50));
+        
+        userManagementButton.setFont(buttonFont);
+        userManagementButton.setBackground(new Color(156, 39, 176));
+        userManagementButton.setForeground(Color.WHITE);
+        userManagementButton.setPreferredSize(new Dimension(250, 50));
         
         logoutButton.setFont(buttonFont);
         logoutButton.setBackground(new Color(220, 20, 60));
@@ -87,6 +102,12 @@ public class MainMenuPanel extends JPanel {
         add(reportsButton, gbc);
         
         gbc.gridy = 5;
+        add(salaryComponentsButton, gbc);
+        
+        gbc.gridy = 6;
+        add(userManagementButton, gbc);
+        
+        gbc.gridy = 7;
         add(logoutButton, gbc);
     }
     
@@ -112,6 +133,20 @@ public class MainMenuPanel extends JPanel {
             }
         });
         
+        salaryComponentsButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mainApp.showSalaryComponentsPanel();
+            }
+        });
+        
+        userManagementButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mainApp.showUserManagementPanel();
+            }
+        });
+        
         logoutButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -125,8 +160,12 @@ public class MainMenuPanel extends JPanel {
     public void updateWelcomeMessage() {
         if (mainApp.getAuthManager().isLoggedIn()) {
             String username = mainApp.getAuthManager().getCurrentUser().getUsername();
-            String role = mainApp.getAuthManager().getCurrentUser().getRole();
+            String role = mainApp.getAuthManager().getCurrentUser().getRoleString();
             welcomeLabel.setText("Welcome, " + username + " (" + role + ")!");
+            
+            // Show/hide user management button based on permissions
+            models.User currentUser = mainApp.getAuthManager().getCurrentUser();
+            userManagementButton.setVisible(currentUser != null && currentUser.hasPermission("user.manage"));
         }
     }
 }
